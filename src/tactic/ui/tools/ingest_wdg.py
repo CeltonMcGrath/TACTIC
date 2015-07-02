@@ -575,7 +575,7 @@ class IngestUploadWdg(BaseRefreshWdg):
             };
             var background = top.getElement(".spt_files_background");
             background.setStyle("display", "");
-
+           
             spt.message.stop_interval(key);
 
             var info_el = top.getElement(".spt_upload_info");
@@ -585,6 +585,9 @@ class IngestUploadWdg(BaseRefreshWdg):
             {
                 spt.table.run_search();
             }
+            
+            spt.panel.refresh(top);
+            
             '''
             script_found = True
         
@@ -785,8 +788,11 @@ class IngestUploadWdg(BaseRefreshWdg):
         div.add(buttons)
         buttons.add_row()
 
+        button = ActionButtonWdg(title="Metadata")
+        button.add_style("float: right")
+        button.add_style("margin-top: -3px")
+        div.add(button)
 
-        button = IconButtonWdg(title="Fill in Data", icon=IconWdg.EDIT)
         buttons.add_cell(button)
 
 
