@@ -23,6 +23,7 @@ from schedule_wdg import *
 from dependency_wdg import *
 from repo_browser_wdg import *
 from custom_layout_edit_wdg import *
+from custom_layout_edit_wdg2 import *
 from ingest_wdg import *
 from checkout_wdg import *
 from file_detail_wdg import *

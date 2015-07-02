@@ -488,7 +488,29 @@ class MainWdg(BaseRefreshWdg):
         td.add(config_wdg)
 
 
-
+        #****************************************
+        tr = table.add_row()
+        # custom layout editor 
+        td = table.add_cell()
+        td.add_style("padding: 3px")
+        td.add_style("vertical-align: top")
+        title = "Custom Layouts - 2"
+        description = '''Create interfaces using the Custom Layout Editor.'''
+	image = "<img src='/context/icons/64x64/layout_64.png'/>"
+        behavior = {
+            'type': 'click_up',
+            'cbjs_action': '''
+            spt.tab.set_main_body_tab();
+            var class_name = 'tactic.ui.tools.CustomLayoutEditWdg2';
+            var kwargs = {
+                help_alias: 'project-startup-configuration'
+                };
+            spt.tab.add_new("custom_layout_editor", "Custom Layout Editor", class_name, kwargs);
+            '''
+        }
+        config_wdg = my.get_main_section_wdg(title, description, image, behavior)
+        td.add(config_wdg)
+        #****************************************
 
         tr = table.add_row()
 
