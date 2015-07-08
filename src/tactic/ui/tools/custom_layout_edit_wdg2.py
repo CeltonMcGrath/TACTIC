@@ -871,12 +871,6 @@ class CustomLayoutEditWdg2(BaseRefreshWdg):
             html_div.set_name("HTML")
             html_div.add_style("height: 600px")
 
-
-            text = TextAreaWdg("html")
-            content_id = text.set_unique_id()
-            title_wdg = my.get_title_wdg("HTML", content_id)
-            html_div.add(title_wdg)
-
             # DEPRECATED: never worked very well
             # add in a context menu
             """
@@ -884,19 +878,12 @@ class CustomLayoutEditWdg2(BaseRefreshWdg):
             html_div.add(button)
             """
 
-            text.add_style("width: 100%")
-            text.add_style("height: 600px")
-            text.add_style("min-height: 400px")
-            text.add_style("font-size: 12px")
-            text.add_style("font-family: courier")
+            # HTML CODE 
             html = ''.join(htmls)
             html = html.replace( "&amp;", "&")
 
             # a final html conversion to ensure textarea draws properly
             html = Xml.to_html(html, allow_empty=True)
-            if html:
-                text.set_value(html)
-
 
             # add the editor
             from tactic.ui.app import AceEditorWdg
@@ -1016,37 +1003,15 @@ class CustomLayoutEditWdg2(BaseRefreshWdg):
             mako_div = DivWdg()
             tab.add(mako_div)
             mako_div.set_name("python")
-            # replace the placeholder
+            mako_div.add_style("height: 60px")
             
-            text = TextAreaWdg("mako")
-            text.add_class("spt_mako")
-            text.add_class("spt_python")
-            content_id = text.set_unique_id()
-
-
-            title_wdg = my.get_title_wdg("Python", content_id, is_on=True)
-            mako_div.add(title_wdg)
-
-            #editor = AceEditorWdg(width="100%", language="python", code=mako, show_options=False, editor_id='custom_layout_mako')
-            #my.mako_editor_id = editor.get_editor_id()
-            #mako_div.add(editor)
-
             # add the editor
-            #from tactic.ui.app import AceEditorWdg
-            #editor = AceEditorWdg(width="100%", language="python", code=mako, show_options=False, editor_id='custom_layout_python')
-            #my.editor_id = editor.get_editor_id()
-            # html_div.add(editor)
-            #YOYOYOYO
+            from tactic.ui.app import AceEditorWdg
+            editor = AceEditorWdg(width="100%", language="python", code=mako, show_options=False, editor_id='custom_layout_python')
+            my.editor_id = editor.get_editor_id()
+            mako_div.add(editor)
 
-            mako_div.add(text)
-            text.add_style("width: 100%")
-            text.add_style("height: 400px")
-            text.add_style("min-height: 300px")
-            text.add_style("font-size: 12px")
-            text.add_style("font-family: courier")
-            text.add_style("margin: 0 -1 0 -1")
-            #text.add_style("padding-left: 3px")
-            text.set_value(mako)
+            """
             text.add_behavior( {
                 'type': 'mouseout',
                 'cbjs_action': '''
@@ -1064,14 +1029,22 @@ class CustomLayoutEditWdg2(BaseRefreshWdg):
                 }
                 '''
             } )
-
+            """
 
 
             # styles
             style_div = DivWdg()
             tab.add(style_div)
             style_div.set_name("Styles")
+            style_div.add_style("height: 60px")
 
+            # add the editor
+            from tactic.ui.app import AceEditorWdg
+            editor = AceEditorWdg(width="100%", language="css", code=style, show_options=False, editor_id='custom_layout_styles')
+            my.editor_id = editor.get_editor_id()
+            style_div.add(editor)
+   
+            """
             text = TextAreaWdg("style")
             text.add_class("spt_style")
             content_id = text.set_unique_id()
@@ -1087,6 +1060,7 @@ class CustomLayoutEditWdg2(BaseRefreshWdg):
             text.add_style("font-size: 12px")
             text.add_style("font-family: courier")
             text.set_value(style)
+            """
 
             #right_div.add("<br/>"*2)
 
