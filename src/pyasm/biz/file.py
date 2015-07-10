@@ -62,6 +62,10 @@ if os.name == "nt":
                 HAS_IMAGE_MAGICK = True
         except:
             pass
+    if HAS_IMAGE_MAGICK:
+        print "ImageMagick found."
+    else:
+        print "ImageMagick not found."
 else:
     # in other systems (e.g. unix) 'convert' is expected to be in PATH
     try:    
