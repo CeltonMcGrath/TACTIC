@@ -15,6 +15,9 @@ __all__ = ['CherryPyStartup', "_cp_on_http_error"]
 import os, sys, glob
 import cherrypy
 
+from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
+from ws4py.websocket import EchoWebSocket
+
 from pyasm.web.app_server import AppServer
 
 from pyasm.common import Environment, Config
@@ -138,8 +141,11 @@ class Root:
     def _cp_on_http_error(self, status, message):
         return _cp_on_http_error(status, message)
 
-
-
+    @cherrypy.expose
+    def ws(self):
+        cherrypy.log("Handler created: %s" % repr(cherrypy.request.ws_handler)) 
+        print("cat from pyasm")
+ 
 
 class TacticIndex:
     '''Dummy Index file'''

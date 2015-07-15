@@ -2,57 +2,50 @@
 # -*- coding: utf-8 -*-
 # vim:ts=4:sw=4:expandtab:fileencoding=utf-8
 
-from cherrypy.test import test
-test.prefer_parent_path()
-
-try:
-    from hashlib import md5
-except ImportError:
-    # Python 2.4 and earlier
-    from md5 import new as md5
-
 import cherrypy
+from cherrypy._cpcompat import md5, ntob
 from cherrypy.lib import auth_basic
-
-def setup_server():
-    class Root:
-        def index(self):
-            return "This is public."
-        index.exposed = True
-
-    class BasicProtected:
-        def index(self):
-            return "Hello %s, you've been authorized." % cherrypy.request.login
-        index.exposed = True
-
-    class BasicProtected2:
-        def index(self):
-            return "Hello %s, you've been authorized." % cherrypy.request.login
-        index.exposed = True
-
-    userpassdict = {'xuser' : 'xpassword'}
-    userhashdict = {'xuser' : md5('xpassword').hexdigest()}
-
-    def checkpasshash(realm, user, password):
-        p = userhashdict.get(user)
-        return p and p == md5(password).hexdigest() or False
-
-    conf = {'/basic': {'tools.auth_basic.on': True,
-                       'tools.auth_basic.realm': 'wonderland',
-                       'tools.auth_basic.checkpassword': auth_basic.checkpassword_dict(userpassdict)},
-            '/basic2': {'tools.auth_basic.on': True,
-                        'tools.auth_basic.realm': 'wonderland',
-                        'tools.auth_basic.checkpassword': checkpasshash},
-           }
-
-    root = Root()
-    root.basic = BasicProtected()
-    root.basic2 = BasicProtected2()
-    cherrypy.tree.mount(root, config=conf)
-
 from cherrypy.test import helper
 
+
 class BasicAuthTest(helper.CPWebCase):
+
+    def setup_server():
+        class Root:
+            def index(self):
+                return "This is public."
+            index.exposed = True
+
+        class BasicProtected:
+            def index(self):
+                return "Hello %s, you've been authorized." % cherrypy.request.login
+            index.exposed = True
+
+        class BasicProtected2:
+            def index(self):
+                return "Hello %s, you've been authorized." % cherrypy.request.login
+            index.exposed = True
+
+        userpassdict = {'xuser' : 'xpassword'}
+        userhashdict = {'xuser' : md5(ntob('xpassword')).hexdigest()}
+
+        def checkpasshash(realm, user, password):
+            p = userhashdict.get(user)
+            return p and p == md5(ntob(password)).hexdigest() or False
+
+        conf = {'/basic': {'tools.auth_basic.on': True,
+                           'tools.auth_basic.realm': 'wonderland',
+                           'tools.auth_basic.checkpassword': auth_basic.checkpassword_dict(userpassdict)},
+                '/basic2': {'tools.auth_basic.on': True,
+                            'tools.auth_basic.realm': 'wonderland',
+                            'tools.auth_basic.checkpassword': checkpasshash},
+               }
+
+        root = Root()
+        root.basic = BasicProtected()
+        root.basic2 = BasicProtected2()
+        cherrypy.tree.mount(root, config=conf)
+    setup_server = staticmethod(setup_server)
 
     def testPublic(self):
         self.getPage("/")
@@ -84,6 +77,3 @@ class BasicAuthTest(helper.CPWebCase):
         self.assertStatus('200 OK')
         self.assertBody("Hello xuser, you've been authorized.")
 
-
-if __name__ == "__main__":
-    helper.testmain()

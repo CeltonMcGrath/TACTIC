@@ -1,274 +1,17 @@
 """Basic tests for the cherrypy.Request object."""
 
-from cherrypy.test import test
-test.prefer_parent_path()
-
 import os
 localDir = os.path.dirname(__file__)
 import sys
 import types
-from httplib import IncompleteRead
+from cherrypy._cpcompat import IncompleteRead, ntob, ntou, unicodestr
 
 import cherrypy
 from cherrypy import _cptools, tools
-from cherrypy.lib import static, httputil
+from cherrypy.lib import httputil
 
 defined_http_methods = ("OPTIONS", "GET", "HEAD", "POST", "PUT", "DELETE",
                         "TRACE", "PROPFIND")
-
-
-def setup_server():
-    class Root:
-        
-        def index(self):
-            return "hello"
-        index.exposed = True
-        
-        def scheme(self):
-            return cherrypy.request.scheme
-        scheme.exposed = True
-    
-    root = Root()
-    
-    
-    class TestType(type):
-        """Metaclass which automatically exposes all functions in each subclass,
-        and adds an instance of the subclass as an attribute of root.
-        """
-        def __init__(cls, name, bases, dct):
-            type.__init__(cls, name, bases, dct)
-            for value in dct.itervalues():
-                if isinstance(value, types.FunctionType):
-                    value.exposed = True
-            setattr(root, name.lower(), cls())
-    class Test(object):
-        __metaclass__ = TestType
-    
-    
-    class Params(Test):
-        
-        def index(self, thing):
-            return repr(thing)
-        
-        def ismap(self, x, y):
-            return "Coordinates: %s, %s" % (x, y)
-        
-        def default(self, *args, **kwargs):
-            return "args: %s kwargs: %s" % (args, kwargs)
-        default._cp_config = {'request.query_string_encoding': 'latin1'}
-
-
-    class ParamErrorsCallable(object):
-        exposed = True
-        def __call__(self):
-            return "data"
-
-    class ParamErrors(Test):
-
-        def one_positional(self, param1):
-            return "data"
-        one_positional.exposed = True
-
-        def one_positional_args(self, param1, *args):
-            return "data"
-        one_positional_args.exposed = True
-
-        def one_positional_args_kwargs(self, param1, *args, **kwargs):
-            return "data"
-        one_positional_args_kwargs.exposed = True
-
-        def one_positional_kwargs(self, param1, **kwargs):
-            return "data"
-        one_positional_kwargs.exposed = True
-
-        def no_positional(self):
-            return "data"
-        no_positional.exposed = True
-
-        def no_positional_args(self, *args):
-            return "data"
-        no_positional_args.exposed = True
-
-        def no_positional_args_kwargs(self, *args, **kwargs):
-            return "data"
-        no_positional_args_kwargs.exposed = True
-
-        def no_positional_kwargs(self, **kwargs):
-            return "data"
-        no_positional_kwargs.exposed = True
-
-        callable_object = ParamErrorsCallable()
-
-        def raise_type_error(self, **kwargs):
-            raise TypeError("Client Error")
-        raise_type_error.exposed = True
-
-        def raise_type_error_with_default_param(self, x, y=None):
-            return '%d' % 'a' # throw an exception
-        raise_type_error_with_default_param.exposed = True
-
-    def callable_error_page(status, **kwargs):
-        return "Error %s - Well, I'm very sorry but you haven't paid!" % status
-    
-    
-    class Error(Test):
-        
-        _cp_config = {'tools.log_tracebacks.on': True,
-                      }
-        
-        def reason_phrase(self):
-            raise cherrypy.HTTPError("410 Gone fishin'")
-        
-        def custom(self, err='404'):
-            raise cherrypy.HTTPError(int(err), "No, <b>really</b>, not found!")
-        custom._cp_config = {'error_page.404': os.path.join(localDir, "static/index.html"),
-                             'error_page.401': callable_error_page,
-                             }
-        
-        def custom_default(self):
-            return 1 + 'a' # raise an unexpected error
-        custom_default._cp_config = {'error_page.default': callable_error_page}
-        
-        def noexist(self):
-            raise cherrypy.HTTPError(404, "No, <b>really</b>, not found!")
-        noexist._cp_config = {'error_page.404': "nonexistent.html"}
-        
-        def page_method(self):
-            raise ValueError()
-        
-        def page_yield(self):
-            yield "howdy"
-            raise ValueError()
-        
-        def page_streamed(self):
-            yield "word up"
-            raise ValueError()
-            yield "very oops"
-        page_streamed._cp_config = {"response.stream": True}
-        
-        def cause_err_in_finalize(self):
-            # Since status must start with an int, this should error.
-            cherrypy.response.status = "ZOO OK"
-        cause_err_in_finalize._cp_config = {'request.show_tracebacks': False}
-        
-        def rethrow(self):
-            """Test that an error raised here will be thrown out to the server."""
-            raise ValueError()
-        rethrow._cp_config = {'request.throw_errors': True}
-    
-    
-    class Expect(Test):
-        
-        def expectation_failed(self):
-            expect = cherrypy.request.headers.elements("Expect")
-            if expect and expect[0].value != '100-continue':
-                raise cherrypy.HTTPError(400)
-            raise cherrypy.HTTPError(417, 'Expectation Failed')
-
-    class Headers(Test):
-        
-        def default(self, headername):
-            """Spit back out the value for the requested header."""
-            return cherrypy.request.headers[headername]
-        
-        def doubledheaders(self):
-            # From http://www.cherrypy.org/ticket/165:
-            # "header field names should not be case sensitive sayes the rfc.
-            # if i set a headerfield in complete lowercase i end up with two
-            # header fields, one in lowercase, the other in mixed-case."
-            
-            # Set the most common headers
-            hMap = cherrypy.response.headers
-            hMap['content-type'] = "text/html"
-            hMap['content-length'] = 18
-            hMap['server'] = 'CherryPy headertest'
-            hMap['location'] = ('%s://%s:%s/headers/'
-                                % (cherrypy.request.local.ip,
-                                   cherrypy.request.local.port,
-                                   cherrypy.request.scheme))
-            
-            # Set a rare header for fun
-            hMap['Expires'] = 'Thu, 01 Dec 2194 16:00:00 GMT'
-            
-            return "double header test"
-        
-        def ifmatch(self):
-            val = cherrypy.request.headers['If-Match']
-            assert isinstance(val, unicode)
-            cherrypy.response.headers['ETag'] = val
-            return val
-    
-    
-    class HeaderElements(Test):
-        
-        def get_elements(self, headername):
-            e = cherrypy.request.headers.elements(headername)
-            return "\n".join([unicode(x) for x in e])
-    
-    
-    class Method(Test):
-        
-        def index(self):
-            m = cherrypy.request.method
-            if m in defined_http_methods or m == "CONNECT":
-                return m
-            
-            if m == "LINK":
-                raise cherrypy.HTTPError(405)
-            else:
-                raise cherrypy.HTTPError(501)
-        
-        def parameterized(self, data):
-            return data
-        
-        def request_body(self):
-            # This should be a file object (temp file),
-            # which CP will just pipe back out if we tell it to.
-            return cherrypy.request.body
-        
-        def reachable(self):
-            return "success"
-
-    class Divorce:
-        """HTTP Method handlers shouldn't collide with normal method names.
-        For example, a GET-handler shouldn't collide with a method named 'get'.
-        
-        If you build HTTP method dispatching into CherryPy, rewrite this class
-        to use your new dispatch mechanism and make sure that:
-            "GET /divorce HTTP/1.1" maps to divorce.index() and
-            "GET /divorce/get?ID=13 HTTP/1.1" maps to divorce.get()
-        """
-        
-        documents = {}
-        
-        def index(self):
-            yield "<h1>Choose your document</h1>\n"
-            yield "<ul>\n"
-            for id, contents in self.documents.items():
-                yield ("    <li><a href='/divorce/get?ID=%s'>%s</a>: %s</li>\n"
-                       % (id, id, contents))
-            yield "</ul>"
-        index.exposed = True
-        
-        def get(self, ID):
-            return ("Divorce document %s: %s" %
-                    (ID, self.documents.get(ID, "empty")))
-        get.exposed = True
-
-    root.divorce = Divorce()
-
-
-    class ThreadLocal(Test):
-        
-        def index(self):
-            existing = repr(getattr(cherrypy.request, "asdf", None))
-            cherrypy.request.asdf = "rassfrassin"
-            return existing
-    
-    appconf = {
-        '/method': {'request.methods_with_bodies': ("POST", "PUT", "PROPFIND")},
-        }
-    cherrypy.tree.mount(root, config=appconf)
 
 
 #                             Client-side code                             #
@@ -276,17 +19,283 @@ def setup_server():
 from cherrypy.test import helper
 
 class RequestObjectTests(helper.CPWebCase):
-    
+
+    def setup_server():
+        class Root:
+            
+            def index(self):
+                return "hello"
+            index.exposed = True
+            
+            def scheme(self):
+                return cherrypy.request.scheme
+            scheme.exposed = True
+        
+        root = Root()
+        
+        
+        class TestType(type):
+            """Metaclass which automatically exposes all functions in each subclass,
+            and adds an instance of the subclass as an attribute of root.
+            """
+            def __init__(cls, name, bases, dct):
+                type.__init__(cls, name, bases, dct)
+                for value in dct.values():
+                    if isinstance(value, types.FunctionType):
+                        value.exposed = True
+                setattr(root, name.lower(), cls())
+        Test = TestType('Test', (object,), {})
+
+        class PathInfo(Test):
+
+            def default(self, *args):
+                return cherrypy.request.path_info
+
+        class Params(Test):
+            
+            def index(self, thing):
+                return repr(thing)
+            
+            def ismap(self, x, y):
+                return "Coordinates: %s, %s" % (x, y)
+            
+            def default(self, *args, **kwargs):
+                return "args: %s kwargs: %s" % (args, kwargs)
+            default._cp_config = {'request.query_string_encoding': 'latin1'}
+
+
+        class ParamErrorsCallable(object):
+            exposed = True
+            def __call__(self):
+                return "data"
+
+        class ParamErrors(Test):
+
+            def one_positional(self, param1):
+                return "data"
+            one_positional.exposed = True
+
+            def one_positional_args(self, param1, *args):
+                return "data"
+            one_positional_args.exposed = True
+
+            def one_positional_args_kwargs(self, param1, *args, **kwargs):
+                return "data"
+            one_positional_args_kwargs.exposed = True
+
+            def one_positional_kwargs(self, param1, **kwargs):
+                return "data"
+            one_positional_kwargs.exposed = True
+
+            def no_positional(self):
+                return "data"
+            no_positional.exposed = True
+
+            def no_positional_args(self, *args):
+                return "data"
+            no_positional_args.exposed = True
+
+            def no_positional_args_kwargs(self, *args, **kwargs):
+                return "data"
+            no_positional_args_kwargs.exposed = True
+
+            def no_positional_kwargs(self, **kwargs):
+                return "data"
+            no_positional_kwargs.exposed = True
+
+            callable_object = ParamErrorsCallable()
+
+            def raise_type_error(self, **kwargs):
+                raise TypeError("Client Error")
+            raise_type_error.exposed = True
+
+            def raise_type_error_with_default_param(self, x, y=None):
+                return '%d' % 'a' # throw an exception
+            raise_type_error_with_default_param.exposed = True
+
+        def callable_error_page(status, **kwargs):
+            return "Error %s - Well, I'm very sorry but you haven't paid!" % status
+        
+        
+        class Error(Test):
+            
+            _cp_config = {'tools.log_tracebacks.on': True,
+                          }
+            
+            def reason_phrase(self):
+                raise cherrypy.HTTPError("410 Gone fishin'")
+            
+            def custom(self, err='404'):
+                raise cherrypy.HTTPError(int(err), "No, <b>really</b>, not found!")
+            custom._cp_config = {'error_page.404': os.path.join(localDir, "static/index.html"),
+                                 'error_page.401': callable_error_page,
+                                 }
+            
+            def custom_default(self):
+                return 1 + 'a' # raise an unexpected error
+            custom_default._cp_config = {'error_page.default': callable_error_page}
+            
+            def noexist(self):
+                raise cherrypy.HTTPError(404, "No, <b>really</b>, not found!")
+            noexist._cp_config = {'error_page.404': "nonexistent.html"}
+            
+            def page_method(self):
+                raise ValueError()
+            
+            def page_yield(self):
+                yield "howdy"
+                raise ValueError()
+            
+            def page_streamed(self):
+                yield "word up"
+                raise ValueError()
+                yield "very oops"
+            page_streamed._cp_config = {"response.stream": True}
+            
+            def cause_err_in_finalize(self):
+                # Since status must start with an int, this should error.
+                cherrypy.response.status = "ZOO OK"
+            cause_err_in_finalize._cp_config = {'request.show_tracebacks': False}
+            
+            def rethrow(self):
+                """Test that an error raised here will be thrown out to the server."""
+                raise ValueError()
+            rethrow._cp_config = {'request.throw_errors': True}
+        
+        
+        class Expect(Test):
+            
+            def expectation_failed(self):
+                expect = cherrypy.request.headers.elements("Expect")
+                if expect and expect[0].value != '100-continue':
+                    raise cherrypy.HTTPError(400)
+                raise cherrypy.HTTPError(417, 'Expectation Failed')
+
+        class Headers(Test):
+            
+            def default(self, headername):
+                """Spit back out the value for the requested header."""
+                return cherrypy.request.headers[headername]
+            
+            def doubledheaders(self):
+                # From http://www.cherrypy.org/ticket/165:
+                # "header field names should not be case sensitive sayes the rfc.
+                # if i set a headerfield in complete lowercase i end up with two
+                # header fields, one in lowercase, the other in mixed-case."
+                
+                # Set the most common headers
+                hMap = cherrypy.response.headers
+                hMap['content-type'] = "text/html"
+                hMap['content-length'] = 18
+                hMap['server'] = 'CherryPy headertest'
+                hMap['location'] = ('%s://%s:%s/headers/'
+                                    % (cherrypy.request.local.ip,
+                                       cherrypy.request.local.port,
+                                       cherrypy.request.scheme))
+                
+                # Set a rare header for fun
+                hMap['Expires'] = 'Thu, 01 Dec 2194 16:00:00 GMT'
+                
+                return "double header test"
+            
+            def ifmatch(self):
+                val = cherrypy.request.headers['If-Match']
+                assert isinstance(val, unicodestr)
+                cherrypy.response.headers['ETag'] = val
+                return val
+        
+        
+        class HeaderElements(Test):
+            
+            def get_elements(self, headername):
+                e = cherrypy.request.headers.elements(headername)
+                return "\n".join([unicodestr(x) for x in e])
+        
+        
+        class Method(Test):
+            
+            def index(self):
+                m = cherrypy.request.method
+                if m in defined_http_methods or m == "CONNECT":
+                    return m
+                
+                if m == "LINK":
+                    raise cherrypy.HTTPError(405)
+                else:
+                    raise cherrypy.HTTPError(501)
+            
+            def parameterized(self, data):
+                return data
+            
+            def request_body(self):
+                # This should be a file object (temp file),
+                # which CP will just pipe back out if we tell it to.
+                return cherrypy.request.body
+            
+            def reachable(self):
+                return "success"
+
+        class Divorce:
+            """HTTP Method handlers shouldn't collide with normal method names.
+            For example, a GET-handler shouldn't collide with a method named 'get'.
+            
+            If you build HTTP method dispatching into CherryPy, rewrite this class
+            to use your new dispatch mechanism and make sure that:
+                "GET /divorce HTTP/1.1" maps to divorce.index() and
+                "GET /divorce/get?ID=13 HTTP/1.1" maps to divorce.get()
+            """
+            
+            documents = {}
+            
+            def index(self):
+                yield "<h1>Choose your document</h1>\n"
+                yield "<ul>\n"
+                for id, contents in self.documents.items():
+                    yield ("    <li><a href='/divorce/get?ID=%s'>%s</a>: %s</li>\n"
+                           % (id, id, contents))
+                yield "</ul>"
+            index.exposed = True
+            
+            def get(self, ID):
+                return ("Divorce document %s: %s" %
+                        (ID, self.documents.get(ID, "empty")))
+            get.exposed = True
+
+        root.divorce = Divorce()
+
+
+        class ThreadLocal(Test):
+            
+            def index(self):
+                existing = repr(getattr(cherrypy.request, "asdf", None))
+                cherrypy.request.asdf = "rassfrassin"
+                return existing
+        
+        appconf = {
+            '/method': {'request.methods_with_bodies': ("POST", "PUT", "PROPFIND")},
+            }
+        cherrypy.tree.mount(root, config=appconf)
+    setup_server = staticmethod(setup_server)
+
     def test_scheme(self):
         self.getPage("/scheme")
         self.assertBody(self.scheme)
-    
+
+    def testRelativeURIPathInfo(self):
+        self.getPage("/pathinfo/foo/bar")
+        self.assertBody("/pathinfo/foo/bar")
+
+    def testAbsoluteURIPathInfo(self):
+        # http://cherrypy.org/ticket/1061
+        self.getPage("http://localhost/pathinfo/foo/bar")
+        self.assertBody("/pathinfo/foo/bar")
+
     def testParams(self):
         self.getPage("/params/?thing=a")
-        self.assertBody("u'a'")
+        self.assertBody(repr(ntou("a")))
         
         self.getPage("/params/?thing=a&thing=b&thing=c")
-        self.assertBody("[u'a', u'b', u'c']")
+        self.assertBody(repr([ntou('a'), ntou('b'), ntou('c')]))
 
         # Test friendly error message when given params are not accepted.
         cherrypy.config.update({"request.show_mismatched_params": True})
@@ -304,13 +313,15 @@ class RequestObjectTests(helper.CPWebCase):
 
         # Test "% HEX HEX"-encoded URL, param keys, and values
         self.getPage("/params/%d4%20%e3/cheese?Gruy%E8re=Bulgn%e9ville")
-        self.assertBody(r"args: ('\xd4 \xe3', 'cheese') "
-                        r"kwargs: {'Gruy\xe8re': u'Bulgn\xe9ville'}")
+        self.assertBody("args: %s kwargs: %s" %
+                        (('\xd4 \xe3', 'cheese'),
+                         {'Gruy\xe8re': ntou('Bulgn\xe9ville')}))
         
         # Make sure that encoded = and & get parsed correctly
         self.getPage("/params/code?url=http%3A//cherrypy.org/index%3Fa%3D1%26b%3D2")
-        self.assertBody(r"args: ('code',) "
-                        r"kwargs: {'url': u'http://cherrypy.org/index?a=1&b=2'}")
+        self.assertBody("args: %s kwargs: %s" %
+                        (('code',),
+                         {'url': ntou('http://cherrypy.org/index?a=1&b=2')}))
         
         # Test coordinates sent by <img ismap>
         self.getPage("/params/ismap?223,114")
@@ -318,9 +329,10 @@ class RequestObjectTests(helper.CPWebCase):
         
         # Test "name[key]" dict-like params
         self.getPage("/params/dictlike?a[1]=1&a[2]=2&b=foo&b[bar]=baz")
-        self.assertBody(
-            "args: ('dictlike',) "
-            "kwargs: {'a[1]': u'1', 'b[bar]': u'baz', 'b': u'foo', 'a[2]': u'2'}")
+        self.assertBody("args: %s kwargs: %s" %
+                        (('dictlike',),
+                         {'a[1]': ntou('1'), 'b[bar]': ntou('baz'),
+                          'b': ntou('foo'), 'a[2]': ntou('2')}))
 
     def testParamErrors(self):
 
@@ -403,7 +415,7 @@ class RequestObjectTests(helper.CPWebCase):
                 if show_mismatched_params:
                     self.assertInBody(msg)
                 else:
-                    self.assertInBody("Bad Request")
+                    self.assertInBody("400 Bad")
 
 
         # even if body parameters are wrong, if we get the uri wrong, then 
@@ -588,22 +600,22 @@ class RequestObjectTests(helper.CPWebCase):
     
     def test_encoded_headers(self):
         # First, make sure the innards work like expected.
-        self.assertEqual(httputil.decode_TEXT(u"=?utf-8?q?f=C3=BCr?="), u"f\xfcr")
+        self.assertEqual(httputil.decode_TEXT(ntou("=?utf-8?q?f=C3=BCr?=")), ntou("f\xfcr"))
         
         if cherrypy.server.protocol_version == "HTTP/1.1":
             # Test RFC-2047-encoded request and response header values
-            u = u'\u212bngstr\xf6m'
-            c = u"=E2=84=ABngstr=C3=B6m"
-            self.getPage("/headers/ifmatch", [('If-Match', u'=?utf-8?q?%s?=' % c)])
+            u = ntou('\u212bngstr\xf6m', 'escape')
+            c = ntou("=E2=84=ABngstr=C3=B6m")
+            self.getPage("/headers/ifmatch", [('If-Match', ntou('=?utf-8?q?%s?=') % c)])
             # The body should be utf-8 encoded.
-            self.assertBody("\xe2\x84\xabngstr\xc3\xb6m")
+            self.assertBody(ntob("\xe2\x84\xabngstr\xc3\xb6m"))
             # But the Etag header should be RFC-2047 encoded (binary)
-            self.assertHeader("ETag", u'=?utf-8?b?4oSrbmdzdHLDtm0=?=')
+            self.assertHeader("ETag", ntou('=?utf-8?b?4oSrbmdzdHLDtm0=?='))
             
             # Test a *LONG* RFC-2047-encoded request and response header value
             self.getPage("/headers/ifmatch",
-                         [('If-Match', u'=?utf-8?q?%s?=' % (c * 10))])
-            self.assertBody("\xe2\x84\xabngstr\xc3\xb6m" * 10)
+                         [('If-Match', ntou('=?utf-8?q?%s?=') % (c * 10))])
+            self.assertBody(ntob("\xe2\x84\xabngstr\xc3\xb6m") * 10)
             # Note: this is different output for Python3, but it decodes fine.
             etag = self.assertHeader("ETag",
                 '=?utf-8?b?4oSrbmdzdHLDtm3ihKtuZ3N0csO2beKEq25nc3Ryw7Zt'
@@ -637,7 +649,7 @@ class RequestObjectTests(helper.CPWebCase):
                 self.assertBody("")
             elif m == "TRACE":
                 # Some HTTP servers (like modpy) have their own TRACE support
-                self.assertEqual(self.body[:5], "TRACE")
+                self.assertEqual(self.body[:5], ntob("TRACE"))
             else:
                 self.assertBody(m)
         
@@ -656,7 +668,7 @@ class RequestObjectTests(helper.CPWebCase):
         
         # Request a PUT method with a file body but no Content-Type.
         # See http://www.cherrypy.org/ticket/790.
-        b = "one thing on top of another"
+        b = ntob("one thing on top of another")
         self.persistent = True
         try:
             conn = self.HTTP_CONN
@@ -718,11 +730,8 @@ class RequestObjectTests(helper.CPWebCase):
     
     def testEmptyThreadlocals(self):
         results = []
-        for x in xrange(20):
+        for x in range(20):
             self.getPage("/threadlocal/")
             results.append(self.body)
-        self.assertEqual(results, ["None"] * 20)
+        self.assertEqual(results, [ntob("None")] * 20)
 
-
-if __name__ == '__main__':
-    helper.testmain()

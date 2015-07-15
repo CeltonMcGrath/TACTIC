@@ -67,6 +67,23 @@ def startup(port, server=""):
         sys.exit(0)
 
     import cherrypy
+
+    from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
+    from ws4py.websocket import EchoWebSocket
+    from ws4py.websocket import WebSocket
+    from ws4py.messaging import TextMessage
+
+    class ChatWebSocketHandler(WebSocket):
+        def received_message(self, m):
+            print(m)
+            cherrypy.engine.publish('websocket-broadcast', m)
+
+        def closed(self, code, reason="A client left the room without a proper explanation."):
+            cherrypy.engine.publish('websocket-broadcast', TextMessage(reason))
+
+    WebSocketPlugin(cherrypy.engine).subscribe()
+    cherrypy.tools.websocket = WebSocketTool()
+
     if cherrypy.__version__.startswith("3."):
         from pyasm.web.cherrypy30_startup import CherryPyStartup
         startup = CherryPyStartup(port)
@@ -83,8 +100,9 @@ def startup(port, server=""):
         startup.set_config('global', 'server.log_unhandled_tracebacks', True)
 
         startup.set_config('global', 'engine.autoreload_on', True)
-
-
+        
+        startup.set_config('/ws', 'tools.websocket.on', True)
+        startup.set_config('/ws', 'tools.websocket.handler_cls', ChatWebSocketHandler)
     else:
         from pyasm.web.cherrypy_startup import CherryPyStartup
         startup = CherryPyStartup(port)
@@ -98,7 +116,7 @@ def startup(port, server=""):
 
         startup.set_config('global', 'server.log_tracebacks', True)
         startup.set_config('global', 'server.log_unhandled_tracebacks', True)
-
+       
     hostname = None
     server_default = '127.0.0.1'
     

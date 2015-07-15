@@ -1,8 +1,5 @@
 """Tests for cherrypy/lib/httputil.py."""
 
-from cherrypy.test import test
-test.prefer_parent_path()
-
 import unittest
 from cherrypy.lib import httputil
 

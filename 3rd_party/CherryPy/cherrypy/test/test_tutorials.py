@@ -1,52 +1,50 @@
-from cherrypy.test import test
-test.prefer_parent_path()
-
 import sys
 
 import cherrypy
 from cherrypy.test import helper
 
 
-def setup_server():
-    
-    conf = cherrypy.config.copy()
-    
-    def load_tut_module(name):
-        """Import or reload tutorial module as needed."""
-        cherrypy.config.reset()
-        cherrypy.config.update(conf)
-        
-        target = "cherrypy.tutorial." + name
-        if target in sys.modules:
-            module = reload(sys.modules[target])
-        else:
-            module = __import__(target, globals(), locals(), [''])
-        # The above import will probably mount a new app at "".
-        app = cherrypy.tree.apps[""]
-        
-        app.root.load_tut_module = load_tut_module
-        app.root.sessions = sessions
-        app.root.traceback_setting = traceback_setting
-        
-        test.sync_apps()
-    load_tut_module.exposed = True
-    
-    def sessions():
-        cherrypy.config.update({"tools.sessions.on": True})
-    sessions.exposed = True
-    
-    def traceback_setting():
-        return repr(cherrypy.request.show_tracebacks)
-    traceback_setting.exposed = True
-    
-    class Dummy:
-        pass
-    root = Dummy()
-    root.load_tut_module = load_tut_module
-    cherrypy.tree.mount(root)
-
-
 class TutorialTest(helper.CPWebCase):
+
+    def setup_server(cls):
+        
+        conf = cherrypy.config.copy()
+        
+        def load_tut_module(name):
+            """Import or reload tutorial module as needed."""
+            cherrypy.config.reset()
+            cherrypy.config.update(conf)
+            
+            target = "cherrypy.tutorial." + name
+            if target in sys.modules:
+                module = reload(sys.modules[target])
+            else:
+                module = __import__(target, globals(), locals(), [''])
+            # The above import will probably mount a new app at "".
+            app = cherrypy.tree.apps[""]
+            
+            app.root.load_tut_module = load_tut_module
+            app.root.sessions = sessions
+            app.root.traceback_setting = traceback_setting
+            
+            cls.supervisor.sync_apps()
+        load_tut_module.exposed = True
+        
+        def sessions():
+            cherrypy.config.update({"tools.sessions.on": True})
+        sessions.exposed = True
+        
+        def traceback_setting():
+            return repr(cherrypy.request.show_tracebacks)
+        traceback_setting.exposed = True
+        
+        class Dummy:
+            pass
+        root = Dummy()
+        root.load_tut_module = load_tut_module
+        cherrypy.tree.mount(root)
+    setup_server = classmethod(setup_server)
+
     
     def test01HelloWorld(self):
         self.getPage("/load_tut_module/tut01_helloworld")
@@ -201,10 +199,3 @@ class TutorialTest(helper.CPWebCase):
         self.assertStatus(500)
         self.assertInBody("If you construct an HTTPError with a 'message'")
 
-
-if __name__ == "__main__":
-    helper.testmain({
-        'server.socket_host': '127.0.0.1',
-        'server.socket_port': 8080,
-        'server.thread_pool': 10,
-        })

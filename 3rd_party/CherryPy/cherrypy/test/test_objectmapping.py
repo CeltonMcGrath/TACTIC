@@ -1,171 +1,173 @@
-from cherrypy.test import test
-from cherrypy._cptree import Application
-test.prefer_parent_path()
-
 import cherrypy
-
+from cherrypy._cpcompat import ntou
+from cherrypy._cptree import Application
+from cherrypy.test import helper
 
 script_names = ["", "/foo", "/users/fred/blog", "/corp/blog"]
 
-def setup_server():
-    class Root:
-        def index(self, name="world"):
-            return name
-        index.exposed = True
-        
-        def foobar(self):
-            return "bar"
-        foobar.exposed = True
-        
-        def default(self, *params, **kwargs):
-            return "default:" + repr(params)
-        default.exposed = True
-        
-        def other(self):
-            return "other"
-        other.exposed = True
-        
-        def extra(self, *p):
-            return repr(p)
-        extra.exposed = True
-        
-        def redirect(self):
-            raise cherrypy.HTTPRedirect('dir1/', 302)
-        redirect.exposed = True
-        
-        def notExposed(self):
-            return "not exposed"
-        
-        def confvalue(self):
-            return cherrypy.request.config.get("user")
-        confvalue.exposed = True
-        
-        def redirect_via_url(self, path):
-            raise cherrypy.HTTPRedirect(cherrypy.url(path))
-        redirect_via_url.exposed = True
-    
-    def mapped_func(self, ID=None):
-        return "ID is %s" % ID
-    mapped_func.exposed = True
-    setattr(Root, "Von B\xfclow", mapped_func)
-    
-    
-    class Exposing:
-        def base(self):
-            return "expose works!"
-        cherrypy.expose(base)
-        cherrypy.expose(base, "1")
-        cherrypy.expose(base, "2")
-    
-    class ExposingNewStyle(object):
-        def base(self):
-            return "expose works!"
-        cherrypy.expose(base)
-        cherrypy.expose(base, "1")
-        cherrypy.expose(base, "2")
-    
-    
-    class Dir1:
-        def index(self):
-            return "index for dir1"
-        index.exposed = True
-        
-        def myMethod(self):
-            return "myMethod from dir1, path_info is:" + repr(cherrypy.request.path_info)
-        myMethod.exposed = True
-        myMethod._cp_config = {'tools.trailing_slash.extra': True}
-        
-        def default(self, *params):
-            return "default for dir1, param is:" + repr(params)
-        default.exposed = True
-
-
-    class Dir2:
-        def index(self):
-            return "index for dir2, path is:" + cherrypy.request.path_info
-        index.exposed = True
-        
-        def script_name(self):
-            return cherrypy.tree.script_name()
-        script_name.exposed = True
-        
-        def cherrypy_url(self):
-            return cherrypy.url("/extra")
-        cherrypy_url.exposed = True
-        
-        def posparam(self, *vpath):
-            return "/".join(vpath)
-        posparam.exposed = True
-    
-    
-    class Dir3:
-        def default(self):
-            return "default for dir3, not exposed"
-    
-    class Dir4:
-        def index(self):
-            return "index for dir4, not exposed"
-    
-    class DefNoIndex:
-        def default(self, *args):
-            raise cherrypy.HTTPRedirect("contact")
-        default.exposed = True
-    
-    # MethodDispatcher code
-    class ByMethod:
-        exposed = True
-        
-        def __init__(self, *things):
-            self.things = list(things)
-        
-        def GET(self):
-            return repr(self.things)
-        
-        def POST(self, thing):
-            self.things.append(thing)
-    
-    class Collection:
-        default = ByMethod('a', 'bit')
-    
-    Root.exposing = Exposing()
-    Root.exposingnew = ExposingNewStyle()
-    Root.dir1 = Dir1()
-    Root.dir1.dir2 = Dir2()
-    Root.dir1.dir2.dir3 = Dir3()
-    Root.dir1.dir2.dir3.dir4 = Dir4()
-    Root.defnoindex = DefNoIndex()
-    Root.bymethod = ByMethod('another')
-    Root.collection = Collection()
-    
-    d = cherrypy.dispatch.MethodDispatcher()
-    for url in script_names:
-        conf = {'/': {'user': (url or "/").split("/")[-2]},
-                '/bymethod': {'request.dispatch': d},
-                '/collection': {'request.dispatch': d},
-                }
-        cherrypy.tree.mount(Root(), url, conf)
-    
-    
-    class Isolated:
-        def index(self):
-            return "made it!"
-        index.exposed = True
-    
-    cherrypy.tree.mount(Isolated(), "/isolated")
-    
-    class AnotherApp:
-        
-        exposed = True
-        
-        def GET(self):
-            return "milk"
-    
-    cherrypy.tree.mount(AnotherApp(), "/app", {'/': {'request.dispatch': d}})
-
-
-from cherrypy.test import helper
 
 class ObjectMappingTest(helper.CPWebCase):
+
+    def setup_server():
+        class Root:
+            def index(self, name="world"):
+                return name
+            index.exposed = True
+            
+            def foobar(self):
+                return "bar"
+            foobar.exposed = True
+            
+            def default(self, *params, **kwargs):
+                return "default:" + repr(params)
+            default.exposed = True
+            
+            def other(self):
+                return "other"
+            other.exposed = True
+            
+            def extra(self, *p):
+                return repr(p)
+            extra.exposed = True
+            
+            def redirect(self):
+                raise cherrypy.HTTPRedirect('dir1/', 302)
+            redirect.exposed = True
+            
+            def notExposed(self):
+                return "not exposed"
+            
+            def confvalue(self):
+                return cherrypy.request.config.get("user")
+            confvalue.exposed = True
+            
+            def redirect_via_url(self, path):
+                raise cherrypy.HTTPRedirect(cherrypy.url(path))
+            redirect_via_url.exposed = True
+            
+            def translate_html(self):
+                return "OK"
+            translate_html.exposed = True
+        
+        def mapped_func(self, ID=None):
+            return "ID is %s" % ID
+        mapped_func.exposed = True
+        setattr(Root, "Von B\xfclow", mapped_func)
+        
+        
+        class Exposing:
+            def base(self):
+                return "expose works!"
+            cherrypy.expose(base)
+            cherrypy.expose(base, "1")
+            cherrypy.expose(base, "2")
+        
+        class ExposingNewStyle(object):
+            def base(self):
+                return "expose works!"
+            cherrypy.expose(base)
+            cherrypy.expose(base, "1")
+            cherrypy.expose(base, "2")
+        
+        
+        class Dir1:
+            def index(self):
+                return "index for dir1"
+            index.exposed = True
+            
+            def myMethod(self):
+                return "myMethod from dir1, path_info is:" + repr(cherrypy.request.path_info)
+            myMethod.exposed = True
+            myMethod._cp_config = {'tools.trailing_slash.extra': True}
+            
+            def default(self, *params):
+                return "default for dir1, param is:" + repr(params)
+            default.exposed = True
+
+
+        class Dir2:
+            def index(self):
+                return "index for dir2, path is:" + cherrypy.request.path_info
+            index.exposed = True
+            
+            def script_name(self):
+                return cherrypy.tree.script_name()
+            script_name.exposed = True
+            
+            def cherrypy_url(self):
+                return cherrypy.url("/extra")
+            cherrypy_url.exposed = True
+            
+            def posparam(self, *vpath):
+                return "/".join(vpath)
+            posparam.exposed = True
+        
+        
+        class Dir3:
+            def default(self):
+                return "default for dir3, not exposed"
+        
+        class Dir4:
+            def index(self):
+                return "index for dir4, not exposed"
+        
+        class DefNoIndex:
+            def default(self, *args):
+                raise cherrypy.HTTPRedirect("contact")
+            default.exposed = True
+        
+        # MethodDispatcher code
+        class ByMethod:
+            exposed = True
+            
+            def __init__(self, *things):
+                self.things = list(things)
+            
+            def GET(self):
+                return repr(self.things)
+            
+            def POST(self, thing):
+                self.things.append(thing)
+        
+        class Collection:
+            default = ByMethod('a', 'bit')
+        
+        Root.exposing = Exposing()
+        Root.exposingnew = ExposingNewStyle()
+        Root.dir1 = Dir1()
+        Root.dir1.dir2 = Dir2()
+        Root.dir1.dir2.dir3 = Dir3()
+        Root.dir1.dir2.dir3.dir4 = Dir4()
+        Root.defnoindex = DefNoIndex()
+        Root.bymethod = ByMethod('another')
+        Root.collection = Collection()
+        
+        d = cherrypy.dispatch.MethodDispatcher()
+        for url in script_names:
+            conf = {'/': {'user': (url or "/").split("/")[-2]},
+                    '/bymethod': {'request.dispatch': d},
+                    '/collection': {'request.dispatch': d},
+                    }
+            cherrypy.tree.mount(Root(), url, conf)
+        
+        
+        class Isolated:
+            def index(self):
+                return "made it!"
+            index.exposed = True
+        
+        cherrypy.tree.mount(Isolated(), "/isolated")
+        
+        class AnotherApp:
+            
+            exposed = True
+            
+            def GET(self):
+                return "milk"
+        
+        cherrypy.tree.mount(AnotherApp(), "/app", {'/': {'request.dispatch': d}})
+    setup_server = staticmethod(setup_server)
+
     
     def testObjectMapping(self):
         for url in script_names:
@@ -270,6 +272,19 @@ class ObjectMappingTest(helper.CPWebCase):
         self.getPage("/foobar")
         self.assertBody("bar")
     
+    def test_translate(self):
+        self.getPage("/translate_html")
+        self.assertStatus("200 OK")
+        self.assertBody("OK")
+        
+        self.getPage("/translate.html")
+        self.assertStatus("200 OK")
+        self.assertBody("OK")
+        
+        self.getPage("/translate-html")
+        self.assertStatus("200 OK")
+        self.assertBody("OK")
+    
     def test_redir_using_url(self):
         for url in script_names:
             prefix = self.script_name = url
@@ -342,7 +357,7 @@ class ObjectMappingTest(helper.CPWebCase):
         self.assertHeader('Allow', 'GET, HEAD, POST')
         
         self.getPage("/bymethod")
-        self.assertBody("['another', u'one']")
+        self.assertBody(repr(['another', ntou('one')]))
         self.assertHeader('Allow', 'GET, HEAD, POST')
         
         self.getPage("/bymethod", method="PUT")
@@ -387,8 +402,3 @@ class ObjectMappingTest(helper.CPWebCase):
         # However, this does not apply to tree.mount
         self.assertRaises(TypeError, cherrypy.tree.mount, a, None)
 
-
-
-
-if __name__ == "__main__":
-    helper.testmain()

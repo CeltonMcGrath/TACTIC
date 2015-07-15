@@ -1,65 +1,62 @@
-from cherrypy.test import test
-test.prefer_parent_path()
-
 import os
 curdir = os.path.join(os.getcwd(), os.path.dirname(__file__))
 
 import cherrypy
-
-def setup_server():
-    class Root:
-        def index(self):
-            return "Hello, world"
-        index.exposed = True
-        
-        def dom4(self):
-            return "Under construction"
-        dom4.exposed = True
-        
-        def method(self, value):
-            return "You sent %s" % repr(value)
-        method.exposed = True
-    
-    class VHost:
-        def __init__(self, sitename):
-            self.sitename = sitename
-        
-        def index(self):
-            return "Welcome to %s" % self.sitename
-        index.exposed = True
-        
-        def vmethod(self, value):
-            return "You sent %s" % repr(value)
-        vmethod.exposed = True
-        
-        def url(self):
-            return cherrypy.url("nextpage")
-        url.exposed = True
-        
-        # Test static as a handler (section must NOT include vhost prefix)
-        static = cherrypy.tools.staticdir.handler(section='/static', dir=curdir)
-    
-    root = Root()
-    root.mydom2 = VHost("Domain 2")
-    root.mydom3 = VHost("Domain 3")
-    hostmap = {'www.mydom2.com': '/mydom2',
-               'www.mydom3.com': '/mydom3',
-               'www.mydom4.com': '/dom4',
-               }
-    cherrypy.tree.mount(root, config={
-        '/': {'request.dispatch': cherrypy.dispatch.VirtualHost(**hostmap)},
-        # Test static in config (section must include vhost prefix)
-        '/mydom2/static2': {'tools.staticdir.on': True,
-                            'tools.staticdir.root': curdir,
-                            'tools.staticdir.dir': 'static',
-                            'tools.staticdir.index': 'index.html',
-                            },
-        })
-
-
 from cherrypy.test import helper
 
+
 class VirtualHostTest(helper.CPWebCase):
+
+    def setup_server():
+        class Root:
+            def index(self):
+                return "Hello, world"
+            index.exposed = True
+            
+            def dom4(self):
+                return "Under construction"
+            dom4.exposed = True
+            
+            def method(self, value):
+                return "You sent %s" % value
+            method.exposed = True
+        
+        class VHost:
+            def __init__(self, sitename):
+                self.sitename = sitename
+            
+            def index(self):
+                return "Welcome to %s" % self.sitename
+            index.exposed = True
+            
+            def vmethod(self, value):
+                return "You sent %s" % value
+            vmethod.exposed = True
+            
+            def url(self):
+                return cherrypy.url("nextpage")
+            url.exposed = True
+            
+            # Test static as a handler (section must NOT include vhost prefix)
+            static = cherrypy.tools.staticdir.handler(section='/static', dir=curdir)
+        
+        root = Root()
+        root.mydom2 = VHost("Domain 2")
+        root.mydom3 = VHost("Domain 3")
+        hostmap = {'www.mydom2.com': '/mydom2',
+                   'www.mydom3.com': '/mydom3',
+                   'www.mydom4.com': '/dom4',
+                   }
+        cherrypy.tree.mount(root, config={
+            '/': {'request.dispatch': cherrypy.dispatch.VirtualHost(**hostmap)},
+            # Test static in config (section must include vhost prefix)
+            '/mydom2/static2': {'tools.staticdir.on': True,
+                                'tools.staticdir.root': curdir,
+                                'tools.staticdir.dir': 'static',
+                                'tools.staticdir.index': 'index.html',
+                                },
+            })
+    setup_server = staticmethod(setup_server)
     
     def testVirtualHost(self):
         self.getPage("/", [('Host', 'www.mydom1.com')])
@@ -76,14 +73,14 @@ class VirtualHostTest(helper.CPWebCase):
         
         # Test GET, POST, and positional params
         self.getPage("/method?value=root")
-        self.assertBody("You sent u'root'")
+        self.assertBody("You sent root")
         self.getPage("/vmethod?value=dom2+GET", [('Host', 'www.mydom2.com')])
-        self.assertBody("You sent u'dom2 GET'")
+        self.assertBody("You sent dom2 GET")
         self.getPage("/vmethod", [('Host', 'www.mydom3.com')], method="POST",
                      body="value=dom3+POST")
-        self.assertBody("You sent u'dom3 POST'")
+        self.assertBody("You sent dom3 POST")
         self.getPage("/vmethod/pos", [('Host', 'www.mydom3.com')])
-        self.assertBody("You sent 'pos'")
+        self.assertBody("You sent pos")
         
         # Test that cherrypy.url uses the browser url, not the virtual url
         self.getPage("/url", [('Host', 'www.mydom2.com')])
@@ -108,6 +105,3 @@ class VirtualHostTest(helper.CPWebCase):
         self.getPage("/static2", [('Host', 'www.mydom2.com')])
         self.assertStatus(301)
 
-
-if __name__ == "__main__":
-    helper.testmain()

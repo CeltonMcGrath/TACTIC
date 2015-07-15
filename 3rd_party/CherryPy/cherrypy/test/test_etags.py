@@ -1,36 +1,35 @@
-from cherrypy.test import test
-test.prefer_parent_path()
-
 import cherrypy
-
-
-def setup_server():
-    class Root:
-        def resource(self):
-            return "Oh wah ta goo Siam."
-        resource.exposed = True
-        
-        def fail(self, code):
-            code = int(code)
-            if 300 <= code <= 399:
-                raise cherrypy.HTTPRedirect([], code)
-            else:
-                raise cherrypy.HTTPError(code)
-        fail.exposed = True
-        
-        def unicoded(self):
-            return u'I am a \u1ee4nicode string.'
-        unicoded.exposed = True
-        unicoded._cp_config = {'tools.encode.on': True}
-    
-    conf = {'/': {'tools.etags.on': True,
-                  'tools.etags.autotags': True,
-                  }}
-    cherrypy.tree.mount(Root(), config=conf)
-
+from cherrypy._cpcompat import ntou
 from cherrypy.test import helper
 
+
 class ETagTest(helper.CPWebCase):
+
+    def setup_server():
+        class Root:
+            def resource(self):
+                return "Oh wah ta goo Siam."
+            resource.exposed = True
+            
+            def fail(self, code):
+                code = int(code)
+                if 300 <= code <= 399:
+                    raise cherrypy.HTTPRedirect([], code)
+                else:
+                    raise cherrypy.HTTPError(code)
+            fail.exposed = True
+            
+            def unicoded(self):
+                return ntou('I am a \u1ee4nicode string.', 'escape')
+            unicoded.exposed = True
+            # In Python 3, tools.encode is on by default
+            unicoded._cp_config = {'tools.encode.on': True}
+        
+        conf = {'/': {'tools.etags.on': True,
+                      'tools.etags.autotags': True,
+                      }}
+        cherrypy.tree.mount(Root(), config=conf)
+    setup_server = staticmethod(setup_server)
     
     def test_etags(self):
         self.getPage("/resource")
@@ -82,6 +81,3 @@ class ETagTest(helper.CPWebCase):
         self.assertStatus(200)
         self.assertHeader('ETag', etag1)
 
-
-if __name__ == "__main__":
-    helper.testmain()

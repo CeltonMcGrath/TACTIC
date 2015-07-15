@@ -2,43 +2,41 @@
 # -*- coding: utf-8 -*-
 # vim:ts=4:sw=4:expandtab:fileencoding=utf-8
 
-from cherrypy.test import test
-test.prefer_parent_path()
-
 
 import cherrypy
 from cherrypy.lib import auth_digest
-
-def setup_server():
-    class Root:
-        def index(self):
-            return "This is public."
-        index.exposed = True
-
-    class DigestProtected:
-        def index(self):
-            return "Hello %s, you've been authorized." % cherrypy.request.login
-        index.exposed = True
-
-    def fetch_users():
-        return {'test': 'test'}
-
-
-    get_ha1 = cherrypy.lib.auth_digest.get_ha1_dict_plain(fetch_users())
-    conf = {'/digest': {'tools.auth_digest.on': True,
-                        'tools.auth_digest.realm': 'localhost',
-                        'tools.auth_digest.get_ha1': get_ha1,
-                        'tools.auth_digest.key': 'a565c27146791cfb',
-                        'tools.auth_digest.debug': 'True'}}
-
-    root = Root()
-    root.digest = DigestProtected()
-    cherrypy.tree.mount(root, config=conf)
 
 from cherrypy.test import helper
 
 class DigestAuthTest(helper.CPWebCase):
 
+    def setup_server():
+        class Root:
+            def index(self):
+                return "This is public."
+            index.exposed = True
+
+        class DigestProtected:
+            def index(self):
+                return "Hello %s, you've been authorized." % cherrypy.request.login
+            index.exposed = True
+
+        def fetch_users():
+            return {'test': 'test'}
+
+
+        get_ha1 = cherrypy.lib.auth_digest.get_ha1_dict_plain(fetch_users())
+        conf = {'/digest': {'tools.auth_digest.on': True,
+                            'tools.auth_digest.realm': 'localhost',
+                            'tools.auth_digest.get_ha1': get_ha1,
+                            'tools.auth_digest.key': 'a565c27146791cfb',
+                            'tools.auth_digest.debug': 'True'}}
+
+        root = Root()
+        root.digest = DigestProtected()
+        cherrypy.tree.mount(root, config=conf)
+    setup_server = staticmethod(setup_server)
+    
     def testPublic(self):
         self.getPage("/")
         self.assertStatus('200 OK')
@@ -114,7 +112,4 @@ class DigestAuthTest(helper.CPWebCase):
         self.getPage('/digest/', [('Authorization', auth_header)])
         self.assertStatus('200 OK')
         self.assertBody("Hello test, you've been authorized.")
-
-if __name__ == "__main__":
-    helper.testmain()
 

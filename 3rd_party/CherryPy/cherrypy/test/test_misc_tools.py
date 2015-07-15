@@ -1,6 +1,3 @@
-from cherrypy.test import test
-test.prefer_parent_path()
-
 import os
 localDir = os.path.dirname(__file__)
 logfile = os.path.join(localDir, "test_misc_tools.log")
@@ -69,7 +66,12 @@ def setup_server():
             # Read a header directly with '__contains__'
             hasif = 'If-Modified-Since' in cherrypy.request.headers
             # Read a header directly with 'has_key'
-            has = cherrypy.request.headers.has_key('Range')
+            if hasattr(dict, 'has_key'):
+                # Python 2
+                has = cherrypy.request.headers.has_key('Range')
+            else:
+                # Python 3
+                has = 'Range' in cherrypy.request.headers
             # Call a lib function
             mtype = tools.accept.callable(['text/html', 'text/plain'])
             return "Hello, world!"
@@ -95,6 +97,7 @@ def setup_server():
 from cherrypy.test import helper
 
 class ResponseHeadersTest(helper.CPWebCase):
+    setup_server = staticmethod(setup_server)
 
     def testResponseHeadersDecorator(self):
         self.getPage('/')
@@ -108,6 +111,7 @@ class ResponseHeadersTest(helper.CPWebCase):
 
 
 class RefererTest(helper.CPWebCase):
+    setup_server = staticmethod(setup_server)
     
     def testReferer(self):
         self.getPage('/referer/accept')
@@ -129,6 +133,7 @@ class RefererTest(helper.CPWebCase):
 
 
 class AcceptTest(helper.CPWebCase):
+    setup_server = staticmethod(setup_server)
     
     def test_Accept_Tool(self):
         # Test with no header provided
@@ -193,12 +198,10 @@ class AcceptTest(helper.CPWebCase):
 
 
 class AutoVaryTest(helper.CPWebCase):
+    setup_server = staticmethod(setup_server)
 
     def testAutoVary(self):
         self.getPage('/autovary/')
         self.assertHeader(
             "Vary", 'Accept, Accept-Charset, Accept-Encoding, Host, If-Modified-Since, Range')
 
-
-if __name__ == "__main__":
-    helper.testmain()

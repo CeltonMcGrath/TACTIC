@@ -1,12 +1,16 @@
-"""WSGI interface (see PEP 333)."""
+"""WSGI interface (see PEP 333 and 3333).
+
+Note that WSGI environ keys and values are 'native strings'; that is,
+whatever the type of "" is. For Python 2, that's a byte string; for Python 3,
+it's a unicode string. But PEP 3333 says: "even if Python's str type is
+actually Unicode "under the hood", the content of native strings must
+still be translatable to bytes via the Latin-1 encoding!"
+"""
 
 import sys as _sys
 
 import cherrypy as _cherrypy
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+from cherrypy._cpcompat import BytesIO, bytestr, ntob, ntou, py3k, unicodestr
 from cherrypy import _cperror
 from cherrypy.lib import httputil
 
@@ -15,11 +19,11 @@ def downgrade_wsgi_ux_to_1x(environ):
     """Return a new environ dict for WSGI 1.x from the given WSGI u.x environ."""
     env1x = {}
     
-    url_encoding = environ[u'wsgi.url_encoding']
-    for k, v in environ.items():
-        if k in [u'PATH_INFO', u'SCRIPT_NAME', u'QUERY_STRING']:
+    url_encoding = environ[ntou('wsgi.url_encoding')]
+    for k, v in list(environ.items()):
+        if k in [ntou('PATH_INFO'), ntou('SCRIPT_NAME'), ntou('QUERY_STRING')]:
             v = v.encode(url_encoding)
-        elif isinstance(v, unicode):
+        elif isinstance(v, unicodestr):
             v = v.encode('ISO-8859-1')
         env1x[k.encode('ISO-8859-1')] = v
     
@@ -30,7 +34,7 @@ class VirtualHost(object):
     """Select a different WSGI application based on the Host header.
     
     This can be useful when running multiple sites within one CP server.
-    It allows several domains to point to different applications. For example:
+    It allows several domains to point to different applications. For example::
     
         root = Root()
         RootApp = cherrypy.Application(root)
@@ -43,19 +47,22 @@ class VirtualHost(object):
                      })
         
         cherrypy.tree.graft(vhost)
+    """
+    default = None
+    """Required. The default WSGI application."""
     
-    default: required. The default WSGI application.
+    use_x_forwarded_host = True
+    """If True (the default), any "X-Forwarded-Host"
+    request header will be used instead of the "Host" header. This
+    is commonly added by HTTP servers (such as Apache) when proxying."""
     
-    use_x_forwarded_host: if True (the default), any "X-Forwarded-Host"
-        request header will be used instead of the "Host" header. This
-        is commonly added by HTTP servers (such as Apache) when proxying.
-    
-    domains: a dict of {host header value: application} pairs.
-        The incoming "Host" request header is looked up in this dict,
-        and, if a match is found, the corresponding WSGI application
-        will be called instead of the default. Note that you often need
-        separate entries for "example.com" and "www.example.com".
-        In addition, "Host" headers may contain the port number.
+    domains = {}
+    """A dict of {host header value: application} pairs.
+    The incoming "Host" request header is looked up in this dict,
+    and, if a match is found, the corresponding WSGI application
+    will be called instead of the default. Note that you often need
+    separate entries for "example.com" and "www.example.com".
+    In addition, "Host" headers may contain the port number.
     """
     
     def __init__(self, default, domains=None, use_x_forwarded_host=True):
@@ -87,7 +94,8 @@ class InternalRedirector(object):
             environ = environ.copy()
             try:
                 return self.nextapp(environ, start_response)
-            except _cherrypy.InternalRedirect, ir:
+            except _cherrypy.InternalRedirect:
+                ir = _sys.exc_info()[1]
                 sn = environ.get('SCRIPT_NAME', '')
                 path = environ.get('PATH_INFO', '')
                 qs = environ.get('QUERY_STRING', '')
@@ -112,12 +120,13 @@ class InternalRedirector(object):
                 environ['REQUEST_METHOD'] = "GET"
                 environ['PATH_INFO'] = ir.path
                 environ['QUERY_STRING'] = ir.query_string
-                environ['wsgi.input'] = StringIO()
+                environ['wsgi.input'] = BytesIO()
                 environ['CONTENT_LENGTH'] = "0"
                 environ['cherrypy.previous_request'] = ir.request
 
 
 class ExceptionTrapper(object):
+    """WSGI middleware that traps exceptions."""
     
     def __init__(self, nextapp, throws=(KeyboardInterrupt, SystemExit)):
         self.nextapp = nextapp
@@ -144,8 +153,12 @@ class _TrappedResponse(object):
         self.started_response = True
         return self
     
-    def next(self):
-        return self.trap(self.iter_response.next)
+    if py3k:
+        def __next__(self):
+            return self.trap(next, self.iter_response)
+    else:
+        def next(self):
+            return self.trap(self.iter_response.next)
     
     def close(self):
         if hasattr(self.response, 'close'):
@@ -165,6 +178,11 @@ class _TrappedResponse(object):
             if not _cherrypy.request.show_tracebacks:
                 tb = ""
             s, h, b = _cperror.bare_error(tb)
+            if py3k:
+                # What fun.
+                s = s.decode('ISO-8859-1')
+                h = [(k.decode('ISO-8859-1'), v.decode('ISO-8859-1'))
+                     for k, v in h]
             if self.started_response:
                 # Empty our iterable (so future calls raise StopIteration)
                 self.iter_response = iter([])
@@ -183,7 +201,7 @@ class _TrappedResponse(object):
                 raise
             
             if self.started_response:
-                return "".join(b)
+                return ntob("").join(b)
             else:
                 return b
 
@@ -195,24 +213,52 @@ class AppResponse(object):
     """WSGI response iterable for CherryPy applications."""
     
     def __init__(self, environ, start_response, cpapp):
-        if environ.get(u'wsgi.version') == (u'u', 0):
-            environ = downgrade_wsgi_ux_to_1x(environ)
-        self.environ = environ
         self.cpapp = cpapp
         try:
+            if not py3k:
+                if environ.get(ntou('wsgi.version')) == (ntou('u'), 0):
+                    environ = downgrade_wsgi_ux_to_1x(environ)
+            self.environ = environ
             self.run()
+
+            r = _cherrypy.serving.response
+
+            outstatus = r.output_status
+            if not isinstance(outstatus, bytestr):
+                raise TypeError("response.output_status is not a byte string.")
+            
+            outheaders = []
+            for k, v in r.header_list:
+                if not isinstance(k, bytestr):
+                    raise TypeError("response.header_list key %r is not a byte string." % k)
+                if not isinstance(v, bytestr):
+                    raise TypeError("response.header_list value %r is not a byte string." % v)
+                outheaders.append((k, v))
+            
+            if py3k:
+                # According to PEP 3333, when using Python 3, the response status
+                # and headers must be bytes masquerading as unicode; that is, they
+                # must be of type "str" but are restricted to code points in the
+                # "latin-1" set.
+                outstatus = outstatus.decode('ISO-8859-1')
+                outheaders = [(k.decode('ISO-8859-1'), v.decode('ISO-8859-1'))
+                              for k, v in outheaders]
+
+            self.iter_response = iter(r.body)
+            self.write = start_response(outstatus, outheaders)
         except:
             self.close()
             raise
-        r = _cherrypy.serving.response
-        self.iter_response = iter(r.body)
-        self.write = start_response(r.output_status, r.header_list)
     
     def __iter__(self):
         return self
     
-    def next(self):
-        return self.iter_response.next()
+    if py3k:
+        def __next__(self):
+            return next(self.iter_response)
+    else:
+        def next(self):
+            return self.iter_response.next()
     
     def close(self):
         """Close and de-reference the current request and response. (Core)"""
@@ -225,7 +271,7 @@ class AppResponse(object):
         local = httputil.Host('', int(env('SERVER_PORT', 80)),
                            env('SERVER_NAME', ''))
         remote = httputil.Host(env('REMOTE_ADDR', ''),
-                               int(env('REMOTE_PORT', -1)),
+                               int(env('REMOTE_PORT', -1) or -1),
                                env('REMOTE_HOST', ''))
         scheme = env('wsgi.url_scheme')
         sproto = env('ACTUAL_SERVER_PROTOCOL', "HTTP/1.1")
@@ -245,6 +291,29 @@ class AppResponse(object):
         path = httputil.urljoin(self.environ.get('SCRIPT_NAME', ''),
                                 self.environ.get('PATH_INFO', ''))
         qs = self.environ.get('QUERY_STRING', '')
+
+        if py3k:
+            # This isn't perfect; if the given PATH_INFO is in the wrong encoding,
+            # it may fail to match the appropriate config section URI. But meh.
+            old_enc = self.environ.get('wsgi.url_encoding', 'ISO-8859-1')
+            new_enc = self.cpapp.find_config(self.environ.get('PATH_INFO', ''),
+                                             "request.uri_encoding", 'utf-8')
+            if new_enc.lower() != old_enc.lower():
+                # Even though the path and qs are unicode, the WSGI server is
+                # required by PEP 3333 to coerce them to ISO-8859-1 masquerading
+                # as unicode. So we have to encode back to bytes and then decode
+                # again using the "correct" encoding.
+                try:
+                    u_path = path.encode(old_enc).decode(new_enc)
+                    u_qs = qs.encode(old_enc).decode(new_enc)
+                except (UnicodeEncodeError, UnicodeDecodeError):
+                    # Just pass them through without transcoding and hope.
+                    pass
+                else:
+                    # Only set transcoded values if they both succeed.
+                    path = u_path
+                    qs = u_qs
+        
         rproto = self.environ.get('SERVER_PROTOCOL')
         headers = self.translate_headers(self.environ)
         rfile = self.environ['wsgi.input']
@@ -270,30 +339,29 @@ class AppResponse(object):
 
 
 class CPWSGIApp(object):
-    """A WSGI application object for a CherryPy Application.
-    
-    pipeline: a list of (name, wsgiapp) pairs. Each 'wsgiapp' MUST be a
-        constructor that takes an initial, positional 'nextapp' argument,
-        plus optional keyword arguments, and returns a WSGI application
-        (that takes environ and start_response arguments). The 'name' can
-        be any you choose, and will correspond to keys in self.config.
-    
-    head: rather than nest all apps in the pipeline on each call, it's only
-        done the first time, and the result is memoized into self.head. Set
-        this to None again if you change self.pipeline after calling self.
-    
-    config: a dict whose keys match names listed in the pipeline. Each
-        value is a further dict which will be passed to the corresponding
-        named WSGI callable (from the pipeline) as keyword arguments.
-    """
+    """A WSGI application object for a CherryPy Application."""
     
     pipeline = [('ExceptionTrapper', ExceptionTrapper),
                 ('InternalRedirector', InternalRedirector),
                 ]
+    """A list of (name, wsgiapp) pairs. Each 'wsgiapp' MUST be a
+    constructor that takes an initial, positional 'nextapp' argument,
+    plus optional keyword arguments, and returns a WSGI application
+    (that takes environ and start_response arguments). The 'name' can
+    be any you choose, and will correspond to keys in self.config."""
+    
     head = None
+    """Rather than nest all apps in the pipeline on each call, it's only
+    done the first time, and the result is memoized into self.head. Set
+    this to None again if you change self.pipeline after calling self."""
+    
     config = {}
+    """A dict whose keys match names listed in the pipeline. Each
+    value is a further dict which will be passed to the corresponding
+    named WSGI callable (from the pipeline) as keyword arguments."""
     
     response_class = AppResponse
+    """The class to instantiate and return as the next app in the WSGI chain."""
     
     def __init__(self, cpapp, pipeline=None):
         self.cpapp = cpapp

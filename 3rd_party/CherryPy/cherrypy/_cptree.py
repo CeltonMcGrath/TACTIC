@@ -1,7 +1,10 @@
 """CherryPy Application and Tree objects."""
 
 import os
+import sys
+
 import cherrypy
+from cherrypy._cpcompat import ntou, py3k
 from cherrypy import _cpconfig, _cplogging, _cprequest, _cpwsgi, tools
 from cherrypy.lib import httputil
 
@@ -16,29 +19,25 @@ class Application(object):
     (WSGI application object) for itself.
     """
     
-    __metaclass__ = cherrypy._AttributeDocstrings
-    
     root = None
-    root__doc = """
-    The top-most container of page handlers for this app. Handlers should
+    """The top-most container of page handlers for this app. Handlers should
     be arranged in a hierarchy of attributes, matching the expected URI
     hierarchy; the default dispatcher then searches this hierarchy for a
     matching handler. When using a dispatcher other than the default,
     this value may be None."""
     
     config = {}
-    config__doc = """
-    A dict of {path: pathconf} pairs, where 'pathconf' is itself a dict
+    """A dict of {path: pathconf} pairs, where 'pathconf' is itself a dict
     of {key: value} pairs."""
     
     namespaces = _cpconfig.NamespaceSet()
     toolboxes = {'tools': cherrypy.tools}
     
     log = None
-    log__doc = """A LogManager instance. See _cplogging."""
+    """A LogManager instance. See _cplogging."""
     
     wsgiapp = None
-    wsgiapp__doc = """A CPWSGIApp instance. See _cpwsgi."""
+    """A CPWSGIApp instance. See _cpwsgi."""
     
     request_class = _cprequest.Request
     response_class = _cprequest.Response
@@ -63,8 +62,7 @@ class Application(object):
         return "%s.%s(%r, %r)" % (self.__module__, self.__class__.__name__,
                                   self.root, self.script_name)
     
-    script_name__doc = """
-    The URI "mount point" for this app. A mount point is that portion of
+    script_name_doc = """The URI "mount point" for this app. A mount point is that portion of
     the URI which is constant for all URIs that are serviced by this
     application; it does not include scheme, host, or proxy ("virtual host")
     portions of the URI.
@@ -89,7 +87,7 @@ class Application(object):
             value = value.rstrip("/")
         self._script_name = value
     script_name = property(fget=_get_script_name, fset=_set_script_name,
-                           doc=script_name__doc)
+                           doc=script_name_doc)
     
     def merge(self, config):
         """Merge the given config into self.config."""
@@ -127,8 +125,8 @@ class Application(object):
         
         resp = self.response_class()
         cherrypy.serving.load(req, resp)
-        cherrypy.engine.timeout_monitor.acquire()
         cherrypy.engine.publish('acquire_thread')
+        cherrypy.engine.publish('before_request')
         
         return req, resp
     
@@ -136,7 +134,7 @@ class Application(object):
         """Release the current serving (request and response)."""
         req = cherrypy.serving.request
         
-        cherrypy.engine.timeout_monitor.release()
+        cherrypy.engine.publish('after_request')
         
         try:
             req.close()
@@ -158,7 +156,7 @@ class Tree(object):
     """
     
     apps = {}
-    apps__doc = """
+    """
     A dict of the form {script name: application}, where "script name"
     is a string declaring the URI mount point (no trailing slash), and
     "application" is an instance of cherrypy.Application (or an arbitrary
@@ -170,11 +168,14 @@ class Tree(object):
     def mount(self, root, script_name="", config=None):
         """Mount a new app from a root object, script_name, and config.
         
-        root: an instance of a "controller class" (a collection of page
+        root
+            An instance of a "controller class" (a collection of page
             handler methods) which represents the root of the application.
             This may also be an Application instance, or None if using
             a dispatcher other than the default.
-        script_name: a string containing the "mount point" of the application.
+        
+        script_name
+            A string containing the "mount point" of the application.
             This should start with a slash, and be the path portion of the
             URL at which to mount the given root. For example, if root.index()
             will handle requests to "http://www.example.com:8080/dept/app1/",
@@ -182,7 +183,9 @@ class Tree(object):
             
             It MUST NOT end in a slash. If the script_name refers to the
             root of the URI, it MUST be an empty string (not "/").
-        config: a file or dict containing application config.
+        
+        config
+            A file or dict containing application config.
         """
         if script_name is None:
             raise TypeError(
@@ -252,7 +255,7 @@ class Tree(object):
         # to '' (some WSGI servers always set SCRIPT_NAME to '').
         # Try to look up the app using the full path.
         env1x = environ
-        if environ.get(u'wsgi.version') == (u'u', 0):
+        if environ.get(ntou('wsgi.version')) == (ntou('u'), 0):
             env1x = _cpwsgi.downgrade_wsgi_ux_to_1x(environ)
         path = httputil.urljoin(env1x.get('SCRIPT_NAME', ''),
                                 env1x.get('PATH_INFO', ''))
@@ -265,14 +268,23 @@ class Tree(object):
         
         # Correct the SCRIPT_NAME and PATH_INFO environ entries.
         environ = environ.copy()
-        if environ.get(u'wsgi.version') == (u'u', 0):
-            # Python 2/WSGI u.0: all strings MUST be of type unicode
-            enc = environ[u'wsgi.url_encoding']
-            environ[u'SCRIPT_NAME'] = sn.decode(enc)
-            environ[u'PATH_INFO'] = path[len(sn.rstrip("/")):].decode(enc)
+        if not py3k:
+            if environ.get(ntou('wsgi.version')) == (ntou('u'), 0):
+                # Python 2/WSGI u.0: all strings MUST be of type unicode
+                enc = environ[ntou('wsgi.url_encoding')]
+                environ[ntou('SCRIPT_NAME')] = sn.decode(enc)
+                environ[ntou('PATH_INFO')] = path[len(sn.rstrip("/")):].decode(enc)
+            else:
+                # Python 2/WSGI 1.x: all strings MUST be of type str
+                environ['SCRIPT_NAME'] = sn
+                environ['PATH_INFO'] = path[len(sn.rstrip("/")):]
         else:
-            # Python 2/WSGI 1.x: all strings MUST be of type str
-            environ['SCRIPT_NAME'] = sn
-            environ['PATH_INFO'] = path[len(sn.rstrip("/")):]
+            if environ.get(ntou('wsgi.version')) == (ntou('u'), 0):
+                # Python 3/WSGI u.0: all strings MUST be full unicode
+                environ['SCRIPT_NAME'] = sn
+                environ['PATH_INFO'] = path[len(sn.rstrip("/")):]
+            else:
+                # Python 3/WSGI 1.x: all strings MUST be ISO-8859-1 str
+                environ['SCRIPT_NAME'] = sn.encode('utf-8').decode('ISO-8859-1')
+                environ['PATH_INFO'] = path[len(sn.rstrip("/")):].encode('utf-8').decode('ISO-8859-1')
         return app(environ, start_response)
-

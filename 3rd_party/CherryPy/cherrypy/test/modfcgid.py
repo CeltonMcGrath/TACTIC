@@ -40,8 +40,9 @@ import sys
 import time
 
 import cherrypy
+from cherrypy._cpcompat import ntob
 from cherrypy.process import plugins, servers
-from cherrypy.test import test
+from cherrypy.test import helper
 
 
 def read_process(cmd, args=""):
@@ -76,7 +77,7 @@ RewriteRule ^(.*)$ /fastcgi.pyc [L]
 FastCgiExternalServer "%(server)s" -host 127.0.0.1:4000
 """
 
-class ModFCGISupervisor(test.LocalSupervisor):
+class ModFCGISupervisor(helper.LocalSupervisor):
     
     using_apache = True
     using_wsgi = True
@@ -92,7 +93,7 @@ class ModFCGISupervisor(test.LocalSupervisor):
         # For FCGI, we both start apache...
         self.start_apache()
         # ...and our local server
-        test.LocalServer.start(self, modulename)
+        helper.LocalServer.start(self, modulename)
     
     def start_apache(self):
         fcgiconf = CONF_PATH
@@ -105,7 +106,7 @@ class ModFCGISupervisor(test.LocalSupervisor):
             server = repr(os.path.join(curdir, 'fastcgi.pyc'))[1:-1]
             output = self.template % {'port': self.port, 'root': curdir,
                                       'server': server}
-            output = output.replace('\r\n', '\n')
+            output = ntob(output.replace('\r\n', '\n'))
             f.write(output)
         finally:
             f.close()
@@ -117,7 +118,7 @@ class ModFCGISupervisor(test.LocalSupervisor):
     def stop(self):
         """Gracefully shutdown a server that is serving forever."""
         read_process(APACHE_PATH, "-k stop")
-        test.LocalServer.stop(self)
+        helper.LocalServer.stop(self)
     
     def sync_apps(self):
         cherrypy.server.httpserver.fcgiserver.application = self.get_app()
