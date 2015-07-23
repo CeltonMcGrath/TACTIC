@@ -487,7 +487,29 @@ class MainWdg(BaseRefreshWdg):
         config_wdg = my.get_main_section_wdg(title, description, image, behavior)
         td.add(config_wdg)
 
+        ####################### 
+        tr = table.add_row()
+        td = table.add_cell()
+        td.add_style("padding: 3px")
+        td.add_style("vertical-align: top")
+        title = "Stream Widget"
+        description = '''Create interfaces using the Custom Layout Editor.'''
+        image = "<img src='/context/icons/64x64/layout_64.png'/>"
+        behavior = {
+            'type': 'click_up',
+            'cbjs_action': '''
+            spt.tab.set_main_body_tab();
+            var class_name = 'tactic.ui.widget.StreamWdg';
+            var kwargs = {
+                help_alias: 'project-startup-configuration'
+                };
+            spt.tab.add_new("stream_widget", "Stream Widget", class_name, kwargs);
+            '''
+        }
+        config_wdg = my.get_main_section_wdg(title, description, image, behavior)
+        td.add(config_wdg)
 
+ 
 
 
         tr = table.add_row()
