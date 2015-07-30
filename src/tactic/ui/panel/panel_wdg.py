@@ -2590,7 +2590,7 @@ class ViewPanelWdg(BaseRefreshWdg):
         },
      
         "search_key": {
-            'description': 'filter for a search_key usually used for an accompnaying expression',
+            'description': 'filter for a search_key usually used for an accompanying expression',
             'type': 'TextWdg',
             'order': 9
         },
@@ -2619,7 +2619,7 @@ class ViewPanelWdg(BaseRefreshWdg):
         },
 
 
-
+       
 
         'show_select': {
             'description': 'Flag to determine whether or not to show row_selection',
@@ -2641,6 +2641,12 @@ class ViewPanelWdg(BaseRefreshWdg):
             'type': 'SelectWdg',
             'values': 'true|false',
             'order': '03',
+            'category': 'Display'
+        },
+        "no_results_msg": {
+            'description': "Determines whether or not to show the action shelf",
+            'type': 'TextWdg',
+            'order': '03a',
             'category': 'Display'
         },
         "show_gear": {
