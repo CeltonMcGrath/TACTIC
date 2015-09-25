@@ -16,7 +16,7 @@ import re
 from tactic.ui.common import BaseRefreshWdg
 
 from pyasm.common import Environment
-from pyasm.biz import Pipeline, Project
+from pyasm.biz import Pipeline, Project, Process
 from pyasm.command import Command
 from pyasm.web import DivWdg, WebContainer, Table, SpanWdg, HtmlElement
 from pyasm.search import Search, SearchType, SearchKey, SObject
@@ -26,7 +26,7 @@ from pyasm.widget import ProdIconButtonWdg, IconWdg, TextWdg, CheckboxWdg, Hidde
 
 from tactic.ui.container import DialogWdg, TabWdg, SmartMenu, Menu, MenuItem, ResizableTableWdg
 from tactic.ui.widget import ActionButtonWdg, SingleButtonWdg, IconButtonWdg
-from tactic.ui.input import TextInputWdg
+from tactic.ui.input import TextInputWdg, ColorInputWdg
 from pipeline_canvas_wdg import PipelineCanvasWdg
 from client.tactic_client_lib import TacticServerStub
 
@@ -390,12 +390,29 @@ class PipelineListWdg(BaseRefreshWdg):
         top.add_style("position: relative")
 
         title_div = DivWdg()
+        title_div.add_style("height: 30px")
+        title_div.add_style("padding-left: 5px")
+        title_div.add_style("padding-top: 10px")
+        title_div.add_color("background", "background", -10)
+        top.add(title_div)
+        
 
-
-        button = ActionButtonWdg(title="+", tip="Add a new pipeline", size='small')
+        title = DivWdg()
+        title.add("Pipelines")
+        title.add_style("position: absolute")
+        title.add_style("top: 10px")
+        title.add_style("left: 10px")
+        title.add_style("font-size: 1.7em")
+        
+        title_div.add(title)
+       
+        #button = ActionButtonWdg(title="+", tip="Create a complex workflow", size='small')
+        button = DivWdg()
         button.add_style("position: absolute")
-        button.add_style("top: 5px")
-        button.add_style("right: 5px")
+        button.add_style("top: 10px")
+        button.add_style("right: 10px")
+        button.add_style("font-size: 1.7em")
+        button.add_class("glyphicon glyphicon-random")
 
         button.add_behavior( {
         'type': 'click_up',
@@ -414,15 +431,51 @@ class PipelineListWdg(BaseRefreshWdg):
         } )
 
 
+        title_div.add(button)
+        
+        
+        #button = DivWdg(tip="Quickly create your workflow", size='small')
+        button = DivWdg() 
+        button.add_style("position: absolute")
+        button.add_style("top: 10px")
+        button.add_style("right: 45px")
+        button.add_style("font-size: 1.7em")
+        button.add_class("glyphicon glyphicon-flash")
+
+        cbjs_insert = '''
+            info = spt.edit.edit_form_cbk(evt, bvr);
+            search_type = info.info.search_type;
+            code = info.info.sobject.code;
+            mode = "single"
+            var class_name = "tactic.ui.startup.PipelineEditWdg";
+            var kwargs = {
+                search_type: search_type, 
+                pipeline_code: code,
+                mode: mode
+            }
+            spt.api.load_popup("Add new Pipeline", class_name, kwargs);
+            '''
+
+        button.add_behavior( {
+        'type': 'click_up',
+        'cbjs_insert': cbjs_insert, 
+        'cbjs_action': '''
+ 
+        var class_name = 'tactic.ui.panel.EditWdg';
+        var kwargs = {
+            search_type: 'sthpw/pipeline',
+            view: 'insert',
+            show_header: false,
+            single: true,
+            cbjs_insert: bvr.cbjs_insert
+        }
+        
+        spt.api.load_popup("Add New Pipeline", class_name, kwargs);
+        '''
+        } )
 
         title_div.add(button)
 
-        top.add(title_div)
-        title_div.add_style("height: 30px")
-        title_div.add_style("padding-left: 5px")
-        title_div.add_style("padding-top: 10px")
-        title_div.add_color("background", "background", -10)
-        title_div.add("<b>Pipeline</b>")
 
 
 
@@ -738,21 +791,37 @@ class PipelineListWdg(BaseRefreshWdg):
             text.innerHTML = html;
 
             spt.pipeline.set_current_group(value);
-
+             
+            info_tool = top.getElement(".spt_pipeline_tool_info") 
+            //console.log(info_tool);
+             
+            var search_type = 'sthpw/pipeline';
+            var kwargs = {
+                'search_type': search_type,
+                'code': bvr.pipeline_code,
+                'view': 'pipeline_edit_tool'
+            };
+            var class_name = 'tactic.ui.panel.EditWdg';
+            spt.panel.load(info_tool, class_name, kwargs);
+            
 
         };
 
 
         var current_group_name = spt.pipeline.get_current_group();
         var group_name = bvr.pipeline_code;
+        
         if (editor_top && editor_top.hasClass("spt_has_changes")) {
             spt.confirm("Current pipeline has changes.  Do you wish to continue without saving?", ok, null); 
         }
         else if (current_group_name == group_name) {
             spt.confirm("Reload current pipeline?", ok, null); 
-        } else {
+        } 
+        else {
             ok();
         }
+        
+        //ok();
 
 
         '''
@@ -1002,7 +1071,7 @@ class PipelineToolCanvasWdg(PipelineCanvasWdg):
 
 
         menu_item = MenuItem(type='action', label='Edit Process Data')
-        menu.add(menu_item)
+        #menu.add(menu_item)
         menu_item.add_behavior( {
             'cbjs_action': '''
             var node = spt.smenu.get_activator(bvr);
@@ -2579,6 +2648,7 @@ class TaskStatusInfoWdg(BaseInfoWdg):
         search.add_filter("pipeline_code", pipeline_code)
         search.add_filter("process", process)
         process_sobj = search.get_sobject()
+        
         workflow = {}
         if process_sobj:
             workflow = process_sobj.get_json_value("workflow")
@@ -2589,7 +2659,7 @@ class TaskStatusInfoWdg(BaseInfoWdg):
         direction = workflow.get("direction")
         to_status = workflow.get("status")
         mapping = workflow.get("mapping")
-
+        
  
 
 
@@ -2628,11 +2698,15 @@ class TaskStatusInfoWdg(BaseInfoWdg):
         settings_wdg.add(text)
         text.add_style("width: 100%")
 
+        settings_wdg.add("<hr/>")
 
-
-
+        settings_wdg.add("Color:")
+        color = ColorInputWdg(start_color="blue")
+        color.add_style("min-width: 100%")
+        settings_wdg.add(color)
+        
         settings_wdg.add("<br/>")
-
+        
         save_button = ActionButtonWdg(title="Save", color="primary")
         settings_wdg.add(save_button)
         save_button.add_style("float: right")
@@ -3167,7 +3241,8 @@ class PipelineEditorWdg(BaseRefreshWdg):
 
 
 
-        button.set_show_arrow_menu(True)
+        #button.set_show_arrow_menu(True)
+        
         menu = Menu(width=200)
         
 
@@ -3261,9 +3336,9 @@ class PipelineEditorWdg(BaseRefreshWdg):
         '''
         } )
 
-        menus = [menu.get_data()]
-        SmartMenu.add_smart_menu_set( button.get_arrow_wdg(), { 'DG_BUTTON_CTX': menus } )
-        SmartMenu.assign_as_local_activator( button.get_arrow_wdg(), "DG_BUTTON_CTX", True )
+        #menus = [menu.get_data()]
+        #SmartMenu.add_smart_menu_set( button.get_arrow_wdg(), { 'DG_BUTTON_CTX': menus } )
+        #SmartMenu.assign_as_local_activator( button.get_arrow_wdg(), "DG_BUTTON_CTX", True )
  
 
 
