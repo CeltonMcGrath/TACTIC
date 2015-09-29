@@ -101,53 +101,7 @@ class PipelineEditWdg(BaseRefreshWdg):
             return top
 
          
-        if not search_type:
-            
-            div = DivWdg()
-            div.add_class("input-group")
-
-            addon = DivWdg()
-            addon.add_class("input-group-addon")
-            addon.add("Select a search type")
-            div.add(addon)
-
-            select = SearchTypeInputWdg("spt_search_type_input")
-            select.add_class("form_control") 
-            div.add(select)
-            
-            inner.add(div)
-            inner.add_style("padding: 20px")
-            inner.add_style("width: 400px")
-
-            button = ActionButtonWdg(title="Create", tip="Create pipeline")
-            button.add_style("padding: 5px")
-            button.add_behavior( {
-                'type': 'click_up',
-                'cbjs_action': '''
-                var top = bvr.src_el.getParent(".spt_pipelines_top");
-                var select = top.getElement(".spt_input");
-                search_type = select.value;
-                if (!search_type) {
-                    spt.alert("Please select a search type.");
-                    return;
-                } 
-
-                var server = TacticServerStub.get();
-
-                var cmd = 'tactic.ui.startup.PipelineCreateCbk';
-                var kwargs = {
-                    search_type: search_type
-                }
-                server.execute_cmd(cmd, kwargs);
-
-                spt.panel.load(top, "tactic.ui.startup.PipelineEditWdg", {search_type: search_type});
-                '''
-            } )
-            inner.add(button)
-
-            return top
-
-        # get the defalt task statuses
+        # Get the default task statuses
         task_pipeline = Pipeline.get_by_code("task")
         if task_pipeline:
             statuses = task_pipeline.get_process_names()
@@ -215,6 +169,7 @@ class PipelineEditWdg(BaseRefreshWdg):
 
 
         for pipeline in pipelines:
+
             pipeline_div = DivWdg()
             pipelines_div.add(pipeline_div)
             pipeline_div.add_class("spt_pipeline_top")
@@ -442,7 +397,226 @@ class PipelineEditWdg(BaseRefreshWdg):
             return top
 
 
+class SimplePipelineEditor(BaseRefreshWdg)
+        
+    def get_display(my):
+        pipeline_div = DivWdg()
+        pipelines_div.add(pipeline_div)
+        pipeline_div.add_class("spt_pipeline_top")
 
+        code = pipeline.get_code()
+        pipeline_div.add_attr("spt_pipeline_code", code)
+
+        title = DivWdg()
+        pipeline_div.add(title)
+        title.add("Pipeline: ")
+        title.add(code)
+        title.add_style("padding: 8px 10px")
+        title.add_color("background", "background3")
+        title.add_style("font-weight: bold")
+        title.add_style("margin: -10 -10 5 -10")
+
+
+        header_wdg = DivWdg()
+        pipeline_div.add(header_wdg)
+        header_wdg.add_color("background", "background", -5)
+
+        headers = ['Process', 'Description', 'Task Status']
+        widths = ['100px', '180px', '210px']
+        for header, width in zip(headers,widths):
+            th = DivWdg()
+            header_wdg.add(th)
+            th.add("<b>%s</b>" % header)
+            th.add_style("float: left")
+            th.add_style("width: %s" % width)
+            th.add_style("padding: 8px 3px")
+        header_wdg.add("<br clear='all'/>")
+
+
+
+        # get all of the process sobjects from this pipeline
+        pipeline_code = pipeline.get_code()
+        search = Search("config/process")
+        search.add_filter("pipeline_code", pipeline.get_code() )
+        process_sobjs = search.get_sobjects()
+
+        process_sobj_dict = {}
+        for process_sobj in process_sobjs:
+            process = process_sobj.get_value("process")
+            process_sobj_dict[process] = process_sobj
+
+
+        from tactic.ui.container import DynamicListWdg
+        dyn_list = DynamicListWdg()
+        pipeline_div.add(dyn_list)
+        pipeline_div.add_style("width: 725px")
+
+        processes = pipeline.get_process_names()
+        if not processes:
+            processes.append("")
+            processes.append("")
+            processes.append("")
+
+        processes.insert(0, "")
+
+        for i, process in enumerate(processes):
+
+            if process == '':
+                process_name = ''
+                description = ''
+            else:
+                process_sobj = process_sobj_dict.get(process)
+                if process_sobj:
+                    process_name = process_sobj.get_value("process")
+                    description = process_sobj.get_value("description")
+                else:
+                    if isinstance(process,basestring):
+                        process_name = process
+                    else:
+                        process_name = process.get_name()
+                    deccription = ''
+
+            # get the task pipeline for this process
+            if process_name:
+                process = pipeline.get_process(process_name)
+                task_pipeline_code = process.get_task_pipeline()
+                if task_pipeline_code != "task":
+                    task_pipeline = Search.get_by_code("sthpw/pipeline", task_pipeline_code)
+                else:
+                    task_pipeline = None
+            else:
+                task_pipeline_code = "task"
+                task_pipeline = None
+
+
+            process_div = DivWdg()
+            process_div.add_style("float: left")
+            process_div.add_class("spt_process_top")
+
+
+            if i == 0:
+                dyn_list.add_template(process_div)
+            else:
+                dyn_list.add_item(process_div)
+
+            #process_div.add_style("padding-left: 10px")
+            #process_div.add_style("margin: 5px")
+
+            table = Table()
+            process_div.add(table)
+            table.add_row()
+
+            text = TextInputWdg(name="process")
+            table.add_cell(text)
+            text.add_style("width: 95px")
+            text.add_style("margin: 5px")
+            text.set_value(process_name)
+            text.add_class("spt_process")
+
+            # the template has a border
+            if i == 0:
+                text.add_style("border: solid 1px #AAA")
+
+
+
+            text = TextInputWdg(name="description")
+            table.add_cell(text)
+            text.add_style("width: 175px")
+            text.add_style("margin: 5px")
+            text.set_value(description)
+            # the template has a border
+            if i == 0:
+                text.add_style("border: solid 1px #AAA")
+
+
+            text = TextInputWdg(name="task_status")
+            table.add_cell(text)
+            text.add_style("width: 325px")
+            text.add_style("margin: 5px")
+
+            #text.set_value(statuses_str)
+            if task_pipeline:
+                statuses = task_pipeline.get_process_names()
+                text.set_value(",".join(statuses))
+            else:
+                text.set_value("(default)")
+                #text.add_style("opacity: 0.5")
+            
+
+            text.add_style("border-style: none")
+
+            text.add_behavior( {
+            'type': 'click_up',
+            'statuses': statuses_str,
+            'cbjs_action': '''
+            if (bvr.src_el.value == '(default)') {
+                bvr.src_el.value = bvr.statuses;
+            }
+            '''
+            } )
+
+            table.add_cell("&nbsp;"*2)
+
+            button = IconButtonWdg(tip="Trigger", icon=IconWdg.ARROW_OUT)
+            table.add_cell(button)
+            button.add_behavior( {
+                'type': 'click_up',
+                'search_type': search_type,
+                'pipeline_code': pipeline_code,
+                'cbjs_action': '''
+                var top = bvr.src_el.getParent(".spt_process_top");
+                var process_el = top.getElement(".spt_process");
+
+                var process = process_el.value;
+                if (process == "") {
+                    alert("Process value is empty");
+                    return;
+                }
+
+                var class_name = 'tactic.ui.tools.TriggerToolWdg';
+                var kwargs = {
+                    mode: "pipeline",
+                    process: process,
+                    pipeline_code: bvr.pipeline_code
+                };
+                spt.panel.load_popup("Trigger", class_name, kwargs);
+ 
+                '''
+            } )
+
+            """
+            button = IconButtonWdg(tip="Edit", icon=IconWdg.EDIT)
+            table.add_cell(button)
+            button.add_behavior( {
+                'type': 'click_up',
+                'search_type': search_type,
+                'pipeline_code': pipeline_code,
+                'cbjs_action': '''
+                var top = bvr.src_el.getParent(".spt_process_top");
+                var process_el = top.getElement(".spt_process");
+
+                var process = process_el.value;
+                if (process == "") {
+                    alert("Process value is empty");
+                    return;
+                }
+
+                var class_name = 'tactic.ui.panel.EditWdg';
+                var kwargs = {
+                    expression: "@SOBJECT(config/process['process','"+process+"'])"
+                }
+                spt.panel.load_popup("Trigger", class_name, kwargs);
+ 
+                '''
+            } )
+            """
+
+            table.add_cell("&nbsp;"*3)
+           
+
+
+        pipeline_div.add("<br clear='all'/>")
+    pass
 
 class PipelineCreateCbk(Command):
 
