@@ -397,22 +397,37 @@ class PipelineListWdg(BaseRefreshWdg):
         button.add_style("top: 5px")
         button.add_style("right: 5px")
 
+        cbjs_insert = '''
+            info = spt.edit.edit_form_cbk(evt, bvr);
+            search_type = info.info.search_type;
+            code = info.info.sobject.code;
+            mode = "single"
+            var class_name = "tactic.ui.startup.PipelineEditWdg";
+            var kwargs = {
+                search_type: search_type, 
+                pipeline_code: code,
+                mode: mode
+            }
+            spt.api.load_popup("Add new Pipeline", class_name, kwargs);
+            '''
+
         button.add_behavior( {
         'type': 'click_up',
-        'save_event': my.save_new_event,
+        'cbjs_insert': cbjs_insert, 
         'cbjs_action': '''
+ 
         var class_name = 'tactic.ui.panel.EditWdg';
         var kwargs = {
             search_type: 'sthpw/pipeline',
             view: 'insert',
             show_header: false,
             single: true,
-            save_event: bvr.save_event
+            cbjs_insert: bvr.cbjs_insert
         }
+        
         spt.api.load_popup("Add New Pipeline", class_name, kwargs);
         '''
         } )
-
 
 
         title_div.add(button)

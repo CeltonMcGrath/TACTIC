@@ -21,7 +21,7 @@ from pyasm.widget import TextWdg, IconWdg
 
 from tactic.ui.common import BaseRefreshWdg
 from tactic.ui.widget import SingleButtonWdg, ActionButtonWdg, IconButtonWdg
-from tactic.ui.input import TextInputWdg
+from tactic.ui.input import TextInputWdg, SearchTypeInputWdg
 
 
 class PipelineEditWdg(BaseRefreshWdg):
@@ -32,27 +32,31 @@ class PipelineEditWdg(BaseRefreshWdg):
         top.add_color("background", "background")
         top.add_class("spt_pipelines_top")
         my.set_as_panel(top)
-
         inner = DivWdg()
         top.add(inner)
-
-
+        
         search_type = my.kwargs.get("search_type")
         pipeline_code = my.kwargs.get("pipeline_code")
+        mode = my.kwargs.get("mode")
 
-        if search_type:
-            search = Search("sthpw/pipeline")
-            search.add_filter("search_type", search_type)
-            pipelines = search.get_sobjects()
+        if mode == "single" and pipeline_code:
+            pipeline = Pipeline.get_by_code(pipeline_code) 
+            pipelines = [pipeline] 
         else:
-            pipeline = Pipeline.get_by_code(pipeline_code)
-            if pipeline:
-                pipelines = [pipeline]
+            if search_type:
+                search = Search("sthpw/pipeline")
+                search.add_filter("search_type", search_type)
+                pipelines = search.get_sobjects()
+            
             else:
-                pipelines = []
+                pipeline = Pipeline.get_by_code(pipeline_code)
+                if pipeline:
+                    pipelines = [pipeline]
+                else:
+                    pipelines = []
 
 
-        if not pipelines:
+        if not pipelines and search_type:
             div = DivWdg()
             inner.add(div)
             inner.add_style("padding: 50px")
@@ -96,7 +100,52 @@ class PipelineEditWdg(BaseRefreshWdg):
 
             return top
 
+         
+        if not search_type:
+            
+            div = DivWdg()
+            div.add_class("input-group")
 
+            addon = DivWdg()
+            addon.add_class("input-group-addon")
+            addon.add("Select a search type")
+            div.add(addon)
+
+            select = SearchTypeInputWdg("spt_search_type_input")
+            select.add_class("form_control") 
+            div.add(select)
+            
+            inner.add(div)
+            inner.add_style("padding: 20px")
+            inner.add_style("width: 400px")
+
+            button = ActionButtonWdg(title="Create", tip="Create pipeline")
+            button.add_style("padding: 5px")
+            button.add_behavior( {
+                'type': 'click_up',
+                'cbjs_action': '''
+                var top = bvr.src_el.getParent(".spt_pipelines_top");
+                var select = top.getElement(".spt_input");
+                search_type = select.value;
+                if (!search_type) {
+                    spt.alert("Please select a search type.");
+                    return;
+                } 
+
+                var server = TacticServerStub.get();
+
+                var cmd = 'tactic.ui.startup.PipelineCreateCbk';
+                var kwargs = {
+                    search_type: search_type
+                }
+                server.execute_cmd(cmd, kwargs);
+
+                spt.panel.load(top, "tactic.ui.startup.PipelineEditWdg", {search_type: search_type});
+                '''
+            } )
+            inner.add(button)
+
+            return top
 
         # get the defalt task statuses
         task_pipeline = Pipeline.get_by_code("task")
@@ -115,7 +164,9 @@ class PipelineEditWdg(BaseRefreshWdg):
 
         buttons_div = DivWdg()
         pipelines_div.add(buttons_div)
-
+        
+        
+        
         #button = SingleButtonWdg( title="Save Pipelines", icon=IconWdg.SAVE )
         button = ActionButtonWdg( title="Save" )
         buttons_div.add(button)
@@ -148,6 +199,8 @@ class PipelineEditWdg(BaseRefreshWdg):
                 spt.alert(spt.exception.handler(e));
             }
             spt.app_busy.hide();
+            var popup = top.getParent(".spt_popup");
+            spt.popup.close(popup);
         }
         , 100);
 
@@ -401,11 +454,11 @@ class PipelineCreateCbk(Command):
 
         project_code = Project.get_project_code()
         parts = search_type.split("/")
-        code = "%s/%s" % (project_code, parts[1])
+        #code = "%s/%s" % (project_code, parts[1])
 
         pipeline = SearchType.create("sthpw/pipeline")
         pipeline.set_value("search_type", search_type)
-        pipeline.set_value("code", code)
+        #pipeline.set_value("code", code)
 
         pipeline.commit()
 
