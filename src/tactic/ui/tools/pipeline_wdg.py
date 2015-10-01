@@ -10,7 +10,7 @@
 #
 #
 
-__all__ = ['PipelineToolWdg', 'PipelineToolCanvasWdg', 'PipelineEditorWdg', 'PipelinePropertyWdg','PipelineSaveCbk', 'ConnectorInfoWdg', 'ProcessInfoWdg']
+__all__ = ['PipelineToolWdg', 'PipelineToolCanvasWdg', 'PipelineEditorWdg', 'PipelinePropertyWdg','PipelineSaveCbk', 'ConnectorInfoWdg', 'ProcessInfoWdg', 'PipelineWizardWdg']
 
 import re
 from tactic.ui.common import BaseRefreshWdg
@@ -21,7 +21,7 @@ from pyasm.command import Command
 from pyasm.web import DivWdg, WebContainer, Table, SpanWdg, HtmlElement
 from pyasm.search import Search, SearchType, SearchKey, SObject
 from tactic.ui.panel import FastTableLayoutWdg
-
+from tactic.ui.startup import SimplePipelineWdg
 from pyasm.widget import ProdIconButtonWdg, IconWdg, TextWdg, CheckboxWdg, HiddenWdg, SelectWdg, TextAreaWdg
 
 from tactic.ui.container import DialogWdg, TabWdg, SmartMenu, Menu, MenuItem, ResizableTableWdg
@@ -403,11 +403,10 @@ class PipelineListWdg(BaseRefreshWdg):
             code = info.info.sobject.code;
             mode = "single";
             
-            var class_name = "tactic.ui.startup.PipelineEditWdg";
+            var class_name = "tactic.ui.tools.PipelineWizardWdg";
             var kwargs = {
                 search_type: search_type, 
                 pipeline_code: code,
-                mode: mode,
             }
             spt.api.load_popup("Add new Pipeline", class_name, kwargs);
             '''
@@ -4488,4 +4487,25 @@ class PipelineCopyCmd(Command):
     def execute(my):
         pass
 
+class PipelineWizardWdg(BaseRefreshWdg):
+    
+    def get_display(my):
+        top = my.top
+        top.add_color("background", "background")
+        top.add_class("spt_wizard_top")
+        my.set_as_panel(top)
+        
+        buttons_div = DivWdg()
+        top.add(buttons_div)
+
+
+        pipeline_code = my.kwargs.get('pipeline_code')
+        search_type = my.kwargs.get('search_type')
+        if not pipeline_code:
+            return top 
+        
+        pipeline_div = SimplePipelineWdg(search_type=search_type, pipeline_code=pipeline_code)
+        pipeline_div.add_style("padding", "10px")
+        top.add(pipeline_div)
+        return top
 
