@@ -17,7 +17,7 @@ from pyasm.biz import Pipeline, Project
 from pyasm.command import Command
 from pyasm.search import Search, SearchType
 from pyasm.web import DivWdg, Table
-from pyasm.widget import TextWdg, IconWdg
+from pyasm.widget import TextWdg, IconWdg, SelectWdg
 
 from tactic.ui.common import BaseRefreshWdg
 from tactic.ui.widget import SingleButtonWdg, ActionButtonWdg, IconButtonWdg
@@ -233,7 +233,7 @@ class SimplePipelineWdg(BaseRefreshWdg):
         from tactic.ui.container import DynamicListWdg
         dyn_list = DynamicListWdg()
         pipeline_div.add(dyn_list)
-        pipeline_div.add_style("width: 725px")
+        pipeline_div.add_style("width: 750px")
 
         processes = pipeline.get_process_names()
         if not processes:
@@ -301,8 +301,6 @@ class SimplePipelineWdg(BaseRefreshWdg):
             if i == 0:
                 text.add_style("border: solid 1px #AAA")
 
-
-
             text = TextInputWdg(name="description")
             table.add_cell(text)
             text.add_style("width: 175px")
@@ -311,38 +309,50 @@ class SimplePipelineWdg(BaseRefreshWdg):
             # the template has a border
             if i == 0:
                 text.add_style("border: solid 1px #AAA")
+           
+            status_pipeline = SelectWdg(name="spt_task_status_select", 
+                    values_expr="@GET(sthpw/pipeline['search_type', 'sthpw/task'].code)", 
+                    labels_expr="@GET(sthpw/pipeline['search_type', 'sthpw/task'].description)"
+            )
+            status_pipeline.set_value("task")
+            status_pipeline.append_option("-- Custom --", "spt_custom_pipeline")
+            table.add_cell(status_pipeline)
+            status_pipeline.add_style("width: auto")
+            status_pipeline.add_style("margin: 5px")
+            
+            custom_status = TextInputWdg(name="task_status")
+            table.add_cell(custom_status)
+            custom_status.add_style("width: 150px")
+            custom_status.add_style("margin: 5px")
+            custom_status.set_attr('disabled', 'disabled')
 
-
-            text = TextInputWdg(name="task_status")
-            table.add_cell(text)
-            text.add_style("width: 325px")
-            text.add_style("margin: 5px")
-
-            #text.set_value(statuses_str)
+            custom_status.set_value(statuses_str)
+            '''
             if task_pipeline:
                 statuses = task_pipeline.get_process_names()
-                text.set_value(",".join(statuses))
+                custom_status.set_value(",".join(statuses))
             else:
-                text.set_value("(default)")
-                #text.add_style("opacity: 0.5")
-            
+                custom_status.set_value("(default)")
+            '''
 
-            text.add_style("border-style: none")
+            status_pipeline.add_style("border-style: none")
 
-            text.add_behavior( {
-            'type': 'click_up',
-            'statuses': statuses_str,
+            status_pipeline.add_behavior( {
+            'type': 'change',
             'cbjs_action': '''
-            if (bvr.src_el.value == '(default)') {
-                bvr.src_el.value = bvr.statuses;
-            }
+                task_pipeline = bvr.src_el;
+                pipeline_code = task_pipeline.get_selected();
+                if (pipeline_code == "custom") {
+                    spt.alert("Enter your custom pipeline.")
+                }
             '''
             } )
-
-            table.add_cell("&nbsp;"*2)
-
+           
+            
+            #table.add_cell("&nbsp;"*2)
+            
             button = IconButtonWdg(tip="Trigger", icon=IconWdg.ARROW_OUT)
-            table.add_cell(button)
+            #table.add_cell(button)
             button.add_behavior( {
                 'type': 'click_up',
                 'search_type': search_type,
@@ -485,6 +495,7 @@ class PipelineEditCbk(Command):
                 if process == '':
                     continue
 
+                '''
                 if status == '(default)':
                     node = pipeline_xml.get_node("/pipeline/process[@name='%s']" % process)
                     pipeline_xml.del_attribute(node, "task_pipeline")
@@ -494,7 +505,9 @@ class PipelineEditCbk(Command):
                     continue
 
                 status_list = status.split(",")
+            
                 status_xml = my.create_pipeline_xml(status_list)
+                '''
 
                 project_code = Project.get_project_code()
 

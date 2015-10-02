@@ -4493,11 +4493,59 @@ class PipelineWizardWdg(BaseRefreshWdg):
         top = my.top
         top.add_color("background", "background")
         top.add_class("spt_wizard_top")
+        
         my.set_as_panel(top)
         
         buttons_div = DivWdg()
         top.add(buttons_div)
+      
+        message = DivWdg()
+        message.add_style("padding: 10px")
+        message.add_style("font-size: 1.2em")
+        message.add("Begin building your workflow by listing your processes. Then select which statuses a task may have by specifying the task status pipeline.")
+        buttons_div.add(message)
 
+        button = ActionButtonWdg( title="Continue to pipeline editor" )
+        button.add_class("spt_wizard_continue")
+        buttons_div.add(button)
+        button.add_behavior( {
+        'type': 'click_up',
+        'cbjs_action': '''
+        spt.app_busy.show("Saving Pipeline...")
+
+        setTimeout(function() {
+            try {
+                var top = bvr.src_el.getParent(".spt_pipelines_top");
+                // get all the pipeline divs
+                var pipeline_els = top.getElements(".spt_pipeline_top");
+                var data = {};
+                for ( var i = 0; i < pipeline_els.length; i++) {
+                    var pipeline_code = pipeline_els[i].getAttribute("spt_pipeline_code");
+                    var values = spt.api.Utility.get_input_values(pipeline_els[i]);
+                    data[pipeline_code] = values;
+                }
+
+
+                var class_name = 'tactic.ui.startup.PipelineEditCbk';
+                var kwargs = {
+                    data: data
+                }
+                var server = TacticServerStub.get();
+                server.execute_cmd(class_name, kwargs);
+            } catch(e) {
+                spt.alert(spt.exception.handler(e));
+            }
+            spt.app_busy.hide();
+            var popup = top.getParent(".spt_popup");
+            spt.popup.close(popup);
+
+            spt.pipeline.clear_canvas();
+            spt.pipeline.import_pipeline(pipeline_code);
+        }
+        , 100);
+
+        '''
+        } )
 
         pipeline_code = my.kwargs.get('pipeline_code')
         search_type = my.kwargs.get('search_type')
