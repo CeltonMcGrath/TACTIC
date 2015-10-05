@@ -4498,14 +4498,21 @@ class PipelineWizardWdg(BaseRefreshWdg):
         
         buttons_div = DivWdg()
         top.add(buttons_div)
-      
+        buttons_div.add_style("height: 60px")
+         
         message = DivWdg()
         message.add_style("padding: 10px")
         message.add_style("font-size: 1.2em")
-        message.add("Begin building your workflow by listing your processes. Then select which statuses a task may have by specifying the task status pipeline.")
+        message.add_style("float: left")
+        message.add_style("width: 500px")
+        message.add("Begin building your workflow by listing its processes. Then select \
+                a task status pipeline, or create a custom list of statuses.")
         buttons_div.add(message)
 
         button = ActionButtonWdg( title="Continue to pipeline editor" )
+        button.add_style("float: right")
+        button.add_style("margin: 10px")
+        button.add_style("width: auto")
         button.add_class("spt_wizard_continue")
         buttons_div.add(button)
         button.add_behavior( {
@@ -4515,7 +4522,7 @@ class PipelineWizardWdg(BaseRefreshWdg):
 
         setTimeout(function() {
             try {
-                var top = bvr.src_el.getParent(".spt_pipelines_top");
+                var top = bvr.src_el.getParent(".spt_wizard_top");
                 // get all the pipeline divs
                 var pipeline_els = top.getElements(".spt_pipeline_top");
                 var data = {};

@@ -290,7 +290,7 @@ class SimplePipelineWdg(BaseRefreshWdg):
             process_div.add(table)
             table.add_row()
 
-            text = TextInputWdg(name="process")
+            text = TextInputWdg(name="spt_process")
             table.add_cell(text)
             text.add_style("width: 95px")
             text.add_style("margin: 5px")
@@ -301,7 +301,7 @@ class SimplePipelineWdg(BaseRefreshWdg):
             if i == 0:
                 text.add_style("border: solid 1px #AAA")
 
-            text = TextInputWdg(name="description")
+            text = TextInputWdg(name="spt_description")
             table.add_cell(text)
             text.add_style("width: 175px")
             text.add_style("margin: 5px")
@@ -320,12 +320,14 @@ class SimplePipelineWdg(BaseRefreshWdg):
             status_pipeline.add_style("width: auto")
             status_pipeline.add_style("margin: 5px")
             
-            custom_status = TextInputWdg(name="task_status")
+            custom_status = TextInputWdg(name="spt_task_status_text")
             table.add_cell(custom_status)
+            custom_status.add_class("spt_status_text")
             custom_status.add_style("width: 150px")
             custom_status.add_style("margin: 5px")
             custom_status.set_attr('disabled', 'disabled')
-
+            custom_status.set_attr('readonly', 'readonly')
+            custom_status.add_style("background:")
             custom_status.set_value(statuses_str)
             '''
             if task_pipeline:
@@ -341,9 +343,16 @@ class SimplePipelineWdg(BaseRefreshWdg):
             'type': 'change',
             'cbjs_action': '''
                 task_pipeline = bvr.src_el;
-                pipeline_code = task_pipeline.get_selected();
-                if (pipeline_code == "custom") {
-                    spt.alert("Enter your custom pipeline.")
+                pipeline_code = task_pipeline.value;
+                process_row = task_pipeline.getParent(".spt_process_top");
+                status_text = process_row.getElement(".spt_status_text");
+                if (pipeline_code == "spt_custom_pipeline") {
+                    status_text.removeAttribute("disabled");
+                    status_text.removeAttribute("readonly");
+                } else {
+                    status_text.addAttribute("disabled");
+                    status_text.addAttribute("readonly");
+                    status_text.value = "123";
                 }
             '''
             } )
@@ -439,7 +448,7 @@ class PipelineEditCbk(Command):
     def execute(my):
 
         data = my.kwargs.get("data")
-
+        print data
         for pipeline_code, pipeline_data in data.items():
 
             pipeline = Pipeline.get_by_code(pipeline_code)
@@ -450,11 +459,11 @@ class PipelineEditCbk(Command):
             # get the task_pipeline for this process
             prev_pipeline_xml = pipeline.get_value("pipeline")
 
-
             # get the input data
-            processes = pipeline_data.get("process")
-            statuses = pipeline_data.get("task_status")
-            descriptions = pipeline_data.get("description")
+            processes = pipeline_data.get("spt_process")
+            descriptions = pipeline_data.get("spt_description")
+            status_pipelines = pipeline_data.get("spt_task_status_select")
+            custom_statuses = pipeline_data.get("spt_task_status_text")
 
             # go through each process and build up the xml
             pipeline_xml = my.create_pipeline_xml(processes)
@@ -462,13 +471,11 @@ class PipelineEditCbk(Command):
             pipeline.set_pipeline(pipeline_xml)
             pipeline.on_insert()
 
-
             pipeline_xml = pipeline.get_xml_value("pipeline")
 
             # need to commit to get the pipeline code
             pipeline.commit()
             pipeline_code = pipeline.get_value("code")
-
 
             # this one doesn't call pipeline.update_process_table() since it adds additional description
             for i, process in enumerate(processes):
@@ -490,53 +497,56 @@ class PipelineEditCbk(Command):
                 
 
             # handle the statuses for each process
-            for process, status in zip(processes, statuses):
+            for process, status, custom_status in zip(processes, status_pipelines, custom_statuses):
 
                 if process == '':
                     continue
+            
+                if status == 'spt_custom_pipeline':
+                    status_list = custom_status.split(",")
+                    status_xml = my.create_pipeline_xml(status_list)
+                    project_code = Project.get_project_code()
+                    status_code = "%s/%s" % (project_code, process)
+                    status_pipeline = Search.get_by_code("sthpw/pipeline", status_code)
+                    if not status_pipeline:
+                        status_pipeline = SearchType.create("sthpw/pipeline")
+                        status_pipeline.set_value("description", 'Status pipeline for process [%s]'%process)
+                        status_pipeline.set_value("code", status_code)
+                        status_pipeline.set_value("search_type", "sthpw/task")
+                        status_pipeline.set_pipeline(status_xml)
+                    else:
+                        status_pipeline.set_pipeline(status_xml)
+                        status_pipeline.on_insert()
+
+                    status_pipeline.set_value("pipeline", status_xml)
+                    status_pipeline.commit()
+
+                    status = status_pipeline.get_code()
 
                 '''
-                if status == '(default)':
+                elif status == 'task':
+                
                     node = pipeline_xml.get_node("/pipeline/process[@name='%s']" % process)
                     pipeline_xml.del_attribute(node, "task_pipeline")
                     
                     default_pipeline = Pipeline.get_by_code('task')
                     default_pipeline.update_process_table()
+                    
                     continue
-
-                status_list = status.split(",")
-            
-                status_xml = my.create_pipeline_xml(status_list)
+                else:
+                    status_pipeline_code = status
                 '''
 
-                project_code = Project.get_project_code()
-
-                status_code = "%s/%s" % (project_code, process)
-                status_pipeline = Search.get_by_code("sthpw/pipeline", status_code)
-                if not status_pipeline:
-                    status_pipeline = SearchType.create("sthpw/pipeline")
-                    status_pipeline.set_value("description", 'Status pipeline for process [%s]'%process)
-                    status_pipeline.set_value("code", status_code)
-                    status_pipeline.set_value("search_type", "sthpw/task")
-                    # update_process_table relies on this 
-                    status_pipeline.set_pipeline(status_xml)
-                else:
-                    status_pipeline.set_pipeline(status_xml)
-                    status_pipeline.on_insert()
-
-                status_pipeline.set_value("pipeline", status_xml)
-                status_pipeline.commit()
-
-
-                status_pipeline_code = status_pipeline.get_code()
-                # get the process node
+                # Update the process node
                 node = pipeline_xml.get_node("/pipeline/process[@name='%s']" % process)
-                pipeline_xml.set_attribute(node, "task_pipeline", status_pipeline_code)
-
+                if status == 'task':
+                    pipeline_xml.del_attribute(node, "task_pipeline")
+                else:
+                    pipeline_xml.set_attribute(node, "task_pipeline", status)
+            
             # commit the changes again to get the task pipelines
             pipeline.set_value("pipeline", pipeline_xml.to_string())
             pipeline.commit()
-
 
     def create_pipeline_xml(my, statuses):
         if not statuses:
