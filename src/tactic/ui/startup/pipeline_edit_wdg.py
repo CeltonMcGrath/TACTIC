@@ -196,11 +196,23 @@ class SimplePipelineWdg(BaseRefreshWdg):
       
         title = DivWdg()
         pipeline_div.add(title)
-        title.add("Pipeline: ")
-        title.add(code)
+
+        code_wdg = DivWdg()
+        code_wdg.add("Pipeline: ")
+        code_wdg.add(code)
+        code_wdg.add_style("float: left")
+        title.add(code_wdg)
+
+        type_wdg = DivWdg()
+        type_wdg.add("Search type: ")
+        type_wdg.add(search_type)
+        type_wdg.add_style("float: right")
+        title.add(type_wdg)
+        
         title.add_style("padding: 8px 10px")
         title.add_color("background", "background3")
         title.add_style("font-weight: bold")
+        title.add_style("height: 20px")
         title.add_style("margin: -10 -10 5 -10")
 
         header_wdg = DivWdg()
@@ -325,40 +337,37 @@ class SimplePipelineWdg(BaseRefreshWdg):
             custom_status.add_class("spt_status_text")
             custom_status.add_style("width: 150px")
             custom_status.add_style("margin: 5px")
-            custom_status.set_attr('disabled', 'disabled')
             custom_status.set_attr('readonly', 'readonly')
             custom_status.add_style("background:")
             custom_status.set_value(statuses_str)
-            '''
-            if task_pipeline:
-                statuses = task_pipeline.get_process_names()
-                custom_status.set_value(",".join(statuses))
-            else:
-                custom_status.set_value("(default)")
-            '''
 
             status_pipeline.add_style("border-style: none")
 
             status_pipeline.add_behavior( {
             'type': 'change',
+            'default_statuses': statuses_str,
             'cbjs_action': '''
                 task_pipeline = bvr.src_el;
                 pipeline_code = task_pipeline.value;
                 process_row = task_pipeline.getParent(".spt_process_top");
                 status_text = process_row.getElement(".spt_status_text");
                 if (pipeline_code == "spt_custom_pipeline") {
-                    status_text.removeAttribute("disabled");
                     status_text.removeAttribute("readonly");
-                } else {
-                    status_text.addAttribute("disabled");
-                    status_text.addAttribute("readonly");
-                    status_text.value = "123";
+                } else if (pipeline_code == "task") {
+                    status_text.set('value', bvr.default_statuses);
+                    status_text.set("readonly", "readonly");
                 }
-            '''
+                else {
+                    server = TacticServerStub.get();
+                    expr = "@GET(config/process['pipeline_code', '"+pipeline_code+"'].process)";
+                    statuses = server.eval(expr);
+                    statuses_str = statuses.join();
+                    status_text.set('value', statuses_str);
+                    status_text.set("readonly", "readonly");
+                }
+            '''  
             } )
            
-            
-            #table.add_cell("&nbsp;"*2)
             
             button = IconButtonWdg(tip="Trigger", icon=IconWdg.ARROW_OUT)
             #table.add_cell(button)
