@@ -219,8 +219,8 @@ class SimplePipelineWdg(BaseRefreshWdg):
         pipeline_div.add(header_wdg)
         header_wdg.add_color("background", "background", -5)
 
-        headers = ['Process', 'Description', 'Task Status']
-        widths = ['100px', '180px', '210px']
+        headers = ['Process', 'Description', 'Status']
+        widths = ['100px', '190px', '100px']
         for header, width in zip(headers,widths):
             th = DivWdg()
             header_wdg.add(th)
@@ -323,19 +323,22 @@ class SimplePipelineWdg(BaseRefreshWdg):
                 text.add_style("border: solid 1px #AAA")
            
             status_pipeline = SelectWdg(name="spt_task_status_select", 
-                    values_expr="@GET(sthpw/pipeline['search_type', 'sthpw/task'].code)", 
-                    labels_expr="@GET(sthpw/pipeline['search_type', 'sthpw/task'].description)"
+                    values_expr="@GET(sthpw/pipeline['project_code',$PROJECT]['search_type', 'sthpw/task'].code)",
+                    labels_expr="@GET(sthpw/pipeline['project_code',$PROJECT]['search_type', 'sthpw/task'].name)"
             )
-            status_pipeline.set_value("task")
-            status_pipeline.append_option("-- Custom --", "spt_custom_pipeline")
+            status_pipeline.append_option("Default", "task")
             table.add_cell(status_pipeline)
+            
+            status_pipeline.append_option("-- Custom --", "spt_custom_pipeline")
+            
+            status_pipeline.set_value("task")
             status_pipeline.add_style("width: auto")
             status_pipeline.add_style("margin: 5px")
             
             custom_status = TextInputWdg(name="spt_task_status_text")
             table.add_cell(custom_status)
             custom_status.add_class("spt_status_text")
-            custom_status.add_style("width: 150px")
+            custom_status.add_style("width: 250px")
             custom_status.add_style("margin: 5px")
             custom_status.set_attr('readonly', 'readonly')
             custom_status.add_style("background:")
