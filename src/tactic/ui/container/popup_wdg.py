@@ -189,12 +189,6 @@ class PopupWdg(BaseRefreshWdg):
         if not width:
             width = 10
 
-        #widget.add_behavior( {
-        #    'type': 'load',
-        #    'cbjs_action': 'bvr.src_el.makeResizable({handle:bvr.src_el.getElement(".spt_popup_resize")})'
-        #} )
-
-
         web = WebContainer.get_web()
 
 
@@ -216,6 +210,7 @@ class PopupWdg(BaseRefreshWdg):
 
 
         table = Table()
+        table.add_class("spt_popup_table")
         table.add_behavior( {
         'type': 'load',
         'width': width,
@@ -997,13 +992,20 @@ spt.popup.get_widget = function( evt, bvr )
     var width_wdg = popup.getElement(".spt_popup_width");
     width_wdg.setStyle("min-width", "200px");
     if (width != null) {
-        width_wdg.setStyle("width", width);
+        //width_wdg.setStyle("width", width);
+        popup.setStyle("width", width);
     }
     if (height != null) {
         width_wdg.setStyle("height", height);
         width_wdg.setStyle("overflow", "auto");
     }
+    
+    // Make the popup resizable
+    var table = popup.getElement(".spt_popup_table");
+    table.setStyle("width", "");
 
+    // Resizable
+    popup.makeResizable();
 
     // replace the title
     if (title != null) {
