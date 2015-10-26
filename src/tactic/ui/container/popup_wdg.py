@@ -911,6 +911,7 @@ spt.popup.get_widget = function( evt, bvr )
     // get the title
     var width = options["width"];
     var height = options["height"];
+    var resize = options["resize"];
     var on_close = options["on_close"];
     var allow_close = options["allow_close"];
 
@@ -999,7 +1000,13 @@ spt.popup.get_widget = function( evt, bvr )
         width_wdg.setStyle("height", height);
         width_wdg.setStyle("overflow", "auto");
     }
-    
+   
+    // If specified, turn off ability to resize
+    var resize_icon = popup.getElement(".spt_popup_resize");
+    if (resize == "false" || resize == false) {
+        resize_icon.setStyle("display", "none");
+    }
+
     // replace the title
     if (title != null) {
         var title_wdg = popup.getElement(".spt_popup_title");
