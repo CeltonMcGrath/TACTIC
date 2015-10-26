@@ -186,15 +186,8 @@ class PopupWdg(BaseRefreshWdg):
 
 
         width = my.kwargs.get("width")
-        print "******* %s" % width
         if not width:
-            width = "50%"
-
-        #widget.add_behavior( {
-        #    'type': 'load',
-        #    'cbjs_action': 'bvr.src_el.makeResizable({handle:bvr.src_el.getElement(".spt_popup_resize")})'
-        #} )
-
+            width = 10
 
         web = WebContainer.get_web()
 
@@ -217,10 +210,12 @@ class PopupWdg(BaseRefreshWdg):
 
 
         table = Table()
+        table.add_class("spt_popup_table")
         table.add_behavior( {
         'type': 'load',
         'width': width,
         'cbjs_action': '''
+        bvr.src_el.setStyle("width", bvr.width)
 
         var popup = bvr.src_el.getParent(".spt_popup");
         var window_size = $(window).getSize();
@@ -228,12 +223,12 @@ class PopupWdg(BaseRefreshWdg):
         var left = window_size.x/2 - size.x/2;
         var top = window_size.y/2 - size.y/2;
         popup.setStyle("left", left);
-        popup.setStyle("width", bvr.width);
         //popup.setStyle("top", top);
 
         var content = popup.getElement(".spt_popup_content");
         content.setStyle("max-height", window_size.y - 100);
         content.setStyle("overflow-y", "auto");
+
         '''
         } )
 
@@ -997,13 +992,20 @@ spt.popup.get_widget = function( evt, bvr )
     var width_wdg = popup.getElement(".spt_popup_width");
     width_wdg.setStyle("min-width", "200px");
     if (width != null) {
-        width_wdg.setStyle("width", width);
+        //width_wdg.setStyle("width", width);
+        popup.setStyle("width", width);
     }
     if (height != null) {
         width_wdg.setStyle("height", height);
         width_wdg.setStyle("overflow", "auto");
     }
+    
+    // Make the popup resizable
+    var table = popup.getElement(".spt_popup_table");
+    table.setStyle("width", "");
 
+    // Resizable
+    popup.makeResizable();
 
     // replace the title
     if (title != null) {
