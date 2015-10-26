@@ -210,7 +210,6 @@ class PopupWdg(BaseRefreshWdg):
 
 
         table = Table()
-        table.add_class("spt_popup_table")
         table.add_behavior( {
         'type': 'load',
         'width': width,
@@ -1000,10 +999,6 @@ spt.popup.get_widget = function( evt, bvr )
         width_wdg.setStyle("height", height);
         width_wdg.setStyle("overflow", "auto");
     }
-    
-    // Make the popup resizable
-    var table = popup.getElement(".spt_popup_table");
-    table.setStyle("width", "");
     
     // replace the title
     if (title != null) {
