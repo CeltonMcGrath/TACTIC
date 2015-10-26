@@ -453,7 +453,7 @@ class PopupWdg(BaseRefreshWdg):
         icon.add_style("z-index: 1000")
         icon.add_class("spt_popup_resize")
         icon.add_style("float: right")
-        icon.add_style("margin-top: -15px")
+        #icon.add_style("margin-top: -15px")
         icon.add_behavior( {
         'type': 'drag',
         "drag_el": '@',
@@ -993,7 +993,8 @@ spt.popup.get_widget = function( evt, bvr )
     width_wdg.setStyle("min-width", "200px");
     if (width != null) {
         //width_wdg.setStyle("width", width);
-        popup.setStyle("width", width);
+        var content = popup.getElement(".spt_popup_content");
+        content.setStyle("width", width);
     }
     if (height != null) {
         width_wdg.setStyle("height", height);
@@ -1003,10 +1004,7 @@ spt.popup.get_widget = function( evt, bvr )
     // Make the popup resizable
     var table = popup.getElement(".spt_popup_table");
     table.setStyle("width", "");
-
-    // Resizable
-    popup.makeResizable();
-
+    
     // replace the title
     if (title != null) {
         var title_wdg = popup.getElement(".spt_popup_title");
