@@ -68,57 +68,58 @@ class PipelineToolWdg(BaseRefreshWdg):
 
         if pipeline_code:
             pipeline = Search.get_by_code("sthpw/pipeline", pipeline_code)
-            pipeline_name = pipeline.get("name")
-            inner.add_behavior( {
-            'type': 'load',
-            'pipeline_code': pipeline_code,
-            'pipeline_name': pipeline_name,
-            'cbjs_action': '''
-            setTimeout( function() {
-            var top = bvr.src_el;
-            var start = top.getElement(".spt_pipeline_editor_start");
-            start.setStyle("display", "none");
+            if pipeline:
+                pipeline_name = pipeline.get("name")
+                inner.add_behavior( {
+                'type': 'load',
+                'pipeline_code': pipeline_code,
+                'pipeline_name': pipeline_name,
+                'cbjs_action': '''
+                setTimeout( function() {
+                var top = bvr.src_el;
+                var start = top.getElement(".spt_pipeline_editor_start");
+                start.setStyle("display", "none");
 
-            var top = bvr.src_el.getParent(".spt_pipeline_tool_top");
-            var wrapper = top.getElement(".spt_pipeline_wrapper");
-            spt.pipeline.init_cbk(wrapper);
+                var top = bvr.src_el.getParent(".spt_pipeline_tool_top");
+                var wrapper = top.getElement(".spt_pipeline_wrapper");
+                spt.pipeline.init_cbk(wrapper);
 
-            spt.pipeline.clear_canvas();
-            spt.pipeline.import_pipeline(bvr.pipeline_code);
+                spt.pipeline.clear_canvas();
+                spt.pipeline.import_pipeline(bvr.pipeline_code);
 
-            var value = bvr.pipeline_code;
-            var title = bvr.pipeline_name;
+                var value = bvr.pipeline_code;
+                var title = bvr.pipeline_name;
 
-            var text = top.getElement(".spt_pipeline_editor_current2");
-            //text.value = title;
-            var html = "<span class='hand spt_pipeline_link' spt_pipeline_code='"+bvr.pipeline_code+"'>"+title+"</span>";
-            text.innerHTML = html;
+                var text = top.getElement(".spt_pipeline_editor_current2");
+                //text.value = title;
+                var html = "<span class='hand spt_pipeline_link' spt_pipeline_code='"+bvr.pipeline_code+"'>"+title+"</span>";
+                text.innerHTML = html;
 
-            spt.pipeline.set_current_group(value);
+                spt.pipeline.set_current_group(value);
 
 
-            var info = top.getElement(".spt_pipeline_tool_info");
-            if (info) {
-                var group_name = spt.pipeline.get_current_group();
+                var info = top.getElement(".spt_pipeline_tool_info");
+                if (info) {
+                    var group_name = spt.pipeline.get_current_group();
 
-                var class_name = 'tactic.ui.tools.PipelineInfoWdg';
-                var kwargs = {
-                    pipeline_code: group_name,
+                    var class_name = 'tactic.ui.tools.PipelineInfoWdg';
+                    var kwargs = {
+                        pipeline_code: group_name,
+                    }
+
+                    spt.panel.load(info, class_name, kwargs);
                 }
 
-                spt.panel.load(info, class_name, kwargs);
-            }
+
+                var editor_top = bvr.src_el.getParent(".spt_pipeline_editor_top");
+                if (editor_top) {
+                    editor_top.removeClass("spt_has_changes");
+                }
 
 
-            var editor_top = bvr.src_el.getParent(".spt_pipeline_editor_top");
-            if (editor_top) {
-                editor_top.removeClass("spt_has_changes");
-            }
-
-
-            }, 0);
-            '''
-            } )
+                }, 0);
+                '''
+                } )
 
 
         inner.add_behavior( {
@@ -3184,7 +3185,7 @@ class ActionInfoWdg(BaseInfoWdg):
 
         pipeline = Pipeline.get_by_code(pipeline_code)
 
-
+        # get the pipeline
         search = Search("sthpw/pipeline")
         search.add_filter("code", pipeline_code)
         pipeline = search.get_sobject()
@@ -4314,6 +4315,9 @@ class ProcessInfoCmd(Command):
 
     def handle_action(my):
 
+        is_admin = Environment.get_security().is_admin()
+
+
         action = my.kwargs.get("action") or "create_new"
         script = my.kwargs.get("script")
         script_path = my.kwargs.get("script_path")
@@ -4323,9 +4327,12 @@ class ProcessInfoCmd(Command):
 
         pipeline_code = my.kwargs.get("pipeline_code")
         process = my.kwargs.get("process")
-        is_admin = Environment.get_security().is_admin()
+
+
         if is_admin:
             language = my.kwargs.get("language")
+            if not language:
+                language = "python"
         else:
             language = "server_js"
 
@@ -4347,17 +4354,17 @@ class ProcessInfoCmd(Command):
 
         # check to see if the trigger already exists
         search = Search("config/trigger")
-        search.add_filter("process", process_sobj.get_code())
         search.add_filter("event", event)
+        search.add_filter("process", process_sobj.get_code())
         trigger = search.get_sobject()
         if not trigger:
+            # create a new one
             trigger = SearchType.create("config/trigger")
             trigger.set_value("event", event)
             trigger.set_value("process", process_sobj.get_code())
             trigger.set_value("mode", "same process,same transaction")
 
 
-        print("action: ", action)
         if action == "command":
             trigger.set_value("script_path", "NULL", quoted=False)
             trigger.set_value("class_name", on_action_class)
@@ -4378,19 +4385,28 @@ class ProcessInfoCmd(Command):
         trigger.commit()
 
         if script:
-            # check to see if the script already exists
-            search = Search("config/custom_script")
-            search.add_filter("folder", folder)
-            search.add_filter("title", "%s" % title)
-            script_obj = search.get_sobject()
-            if not script_obj:
-                script_obj = SearchType.create("config/custom_script")
-                script_obj.set_value("folder", folder)
-                script_obj.set_value("title", "%s" % title)
 
-            script_obj.set_value("language", language)
-            script_obj.set_value("script", script)
-            script_obj.commit()
+            from pyasm.security import Sudo
+
+            sudo = Sudo()
+            try:
+
+                # check to see if the script already exists
+                search = Search("config/custom_script")
+                search.add_filter("folder", folder)
+                search.add_filter("title", "%s" % title)
+                script_obj = search.get_sobject()
+                if not script_obj:
+                    script_obj = SearchType.create("config/custom_script")
+                    script_obj.set_value("folder", folder)
+                    script_obj.set_value("title", "%s" % title)
+
+                script_obj.set_value("language", language)
+                script_obj.set_value("script", script)
+                script_obj.commit()
+
+            finally:
+                sudo.exit()
 
 
     def handle_dependency(my):
@@ -4654,6 +4670,9 @@ class PipelineEditorWdg(BaseRefreshWdg):
         }
         var server = TacticServerStub.get();
         server.get_unique_sobject( "config/process", data );
+
+        // save the pipeline when a new node is added
+        spt.named_events.fire_event('pipeline|save_button', bvr );
 
         node.click();
         '''

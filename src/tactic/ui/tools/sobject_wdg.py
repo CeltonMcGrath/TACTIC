@@ -14,7 +14,7 @@ __all__ = ['SObjectDetailWdg', 'SObjectDetailInfoWdg', 'RelatedSObjectWdg', 'Sna
 
 from tactic.ui.common import BaseRefreshWdg
 
-from pyasm.common import Environment, SPTDate
+from pyasm.common import Environment, SPTDate, Common, FormatValue
 from pyasm.biz import Snapshot, Pipeline
 from pyasm.web import DivWdg, WebContainer, Table, WebState
 from pyasm.search import Search, SearchType, SearchKey
@@ -474,7 +474,7 @@ class SObjectDetailWdg(BaseRefreshWdg):
         else:
             tabs = my.get_default_tabs()
         
-        if "info" not in tabs:
+        if len(tabs) == 0:
             tabs.insert(0, "info")
 
         #if my.sobject.get_value("pipeline_code", no_exception=True):
@@ -689,6 +689,35 @@ class SObjectDetailWdg(BaseRefreshWdg):
                   </display>
                 </element>
                 ''' % values)
+
+
+
+            elif tab == "notes":
+                config_xml.append('''
+                <element name="notes" title="Notes" count="@COUNT(sthpw/note)">
+                  <display class='tactic.ui.panel.CustomLayoutWdg'>
+                  <html>
+                    <div style="padding: 20px">
+                    <div style="font-size: 25px">Notes</div>
+                    <div>List of all of the notes for this item</div>
+                    <hr/>
+                    <br/>
+                    <div style="min-height: 200px">
+                    <element>
+                      <display class='tactic.ui.widget.DiscussionWdg'>
+                        <search_key>%(search_key)s</search_key>
+                        <width>100%%</width>
+                      </display>
+                    </element>
+                    </div>
+                    </div>
+                  </html>
+                  </display>
+                </element>
+                ''' % values)
+
+
+
 
 
 
@@ -1284,8 +1313,22 @@ class SnapshotDetailWdg(SObjectDetailWdg):
 
         version_wdg = DivWdg()
         title_wdg.add(version_wdg)
-        version_wdg.add("Version: %0.3d" % version)
+        version_wdg.add("Latest Version: %0.3d" % version)
         version_wdg.add_style("margin: 5px 0px")
+
+
+        lib_path = my.sobject.get_lib_path_by_type()
+        lib_path_info = Common.get_dir_info(lib_path)
+        if lib_path_info.get("file_type") == "file":
+            size = lib_path_info.get("size")
+            size_str = FormatValue().get_format_value(size, "KB")
+
+            size_wdg = DivWdg()
+            title_wdg.add(size_wdg)
+            size_wdg.add("File Size: %s" % size_str)
+            size_wdg.add_style("margin: 5px 0px")
+
+            media_type = "image"
 
 
 
@@ -1425,12 +1468,10 @@ class TaskDetailWdg(SObjectDetailWdg):
 
         title = DivWdg()
 
-        title.add_color("background", "background3")
         title.add_style("height: 20px")
         title.add_style("padding: 6px")
         title.add_style("font-weight: bold")
         title.add_style("font-size: 1.4em")
-        title.add_border(color="#DDD")
 
         if not my.parent:
             title.add("Parent not found")
@@ -1441,9 +1482,51 @@ class TaskDetailWdg(SObjectDetailWdg):
 
         process = my.sobject.get("process")
         task_code = my.sobject.get("code")
+        status = my.sobject.get("status")
+        description = my.sobject.get("description")
+        start_date = my.sobject.get("bid_start_date")
+        end_date = my.sobject.get("bid_end_date")
 
         bgcolor = title.get_color("background")
-        title.add("<span style='font-size: 1.2em; padding: 4px; margin: 0px 20px 0px 0px; background-color: %s'>%s</span>  Task  <i style='font-size: 0.8em'>(%s)</i> for %s <i style='font-size: 0.8em'>(%s)</i>" % (bgcolor, process, task_code, name, code))
+        title.add("<span style='font-size: 1.2em; padding: 4px; margin: 0px 20px 0px 0px;'>%s</span>  Task <i>(%s)</i>" % (process, code))
+
+
+        # Test adding this ... need to find a place for it
+        #notes_div = DivWdg()
+        #title.add(notes_div)
+        #from tactic.ui.widget.discussion_wdg import DiscussionWdg
+        #discussion_wdg = DiscussionWdg(search_key=my.parent.get_search_key(), process=process, context_hidden=True, show_note_expand=True)
+        #notes_div.add(discussion_wdg)
+
+        title.add("<hr/>")
+
+
+        table = Table()
+        title.add(table)
+        table.add_style("width: 100%")
+        table.add_style("margin-right: 30px")
+
+        if description:
+            table.add_row()
+            table.add_cell("Description:")
+            table.add_cell(description)
+
+
+
+        if start_date:
+            table.add_row()
+            table.add_cell("Start Date:")
+            table.add_cell(start_date)
+
+        if end_date:
+            table.add_row()
+            table.add_cell("End Date:")
+            table.add_cell(end_date)
+
+        table.add_row()
+        table.add_cell("Status:")
+        table.add_cell(status)
+
         return title
 
 
@@ -1487,22 +1570,23 @@ class TaskDetailWdg(SObjectDetailWdg):
             parent_type = my.parent.get_base_search_type()
             config_xml.append( '''
             <element name="info" title="Info">
-             <display class='tactic.ui.container.ContentBoxWdg'>
-                  <title>Info</title>
-                  <content_height>auto</content_height>
-                  <content_width>600px</content_width>
-                  <config>
-                    <element name="content">
-                      <display class='tactic.ui.panel.edit_layout_wdg.EditLayoutWdg'>
-                        <search_type>%s</search_type>
-                        <search_key>%s</search_key>
-                        <width>600px</width>
-                        <mode>view</mode>
-                        <view>detail</view>
-                      </display>
-                    </element>
-                  </config>
-                </display>
+              <display class='tactic.ui.panel.CustomLayoutWdg'>
+              <html>
+                <div style="margin: 20px">
+                  <div style="font-size: 16px">Detailed Info</div>
+                  <hr/>
+                  <element name="content">
+                    <display class='tactic.ui.panel.edit_layout_wdg.EditLayoutWdg'>
+                      <search_type>%s</search_type>
+                      <search_key>%s</search_key>
+                      <width>600px</width>
+                      <mode>view</mode>
+                      <view>detail</view>
+                    </display>
+                  </element>
+                  </div>
+              </html>
+              </display>
             </element>
             ''' % (parent_type, parent_key) )
 
@@ -1693,6 +1777,7 @@ class SObjectTaskStatusDetailWdg(BaseRefreshWdg):
         from tactic.ui.panel import TableLayoutWdg
 
         search_key = my.sobject.get_search_key()
+
 
 
         thumb = ThumbWdg2()

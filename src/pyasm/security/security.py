@@ -743,6 +743,9 @@ class Site(object):
     def break_up_request_path(my, path):
         return {}
 
+    def get_site_redirect(my):
+        return
+
     def register_sites(my, startup, config):
         return
     
@@ -766,6 +769,10 @@ class Site(object):
         return ""
     get_by_ticket = classmethod(get_by_ticket)
 
+
+    def validate_ticket(cls, ticket):
+        return True
+    validate_ticket = classmethod(validate_ticket)
 
     def get_connect_data(cls, site):
         return {}
@@ -1413,6 +1420,12 @@ class Security(Base):
         ticket = Ticket.get_by_valid_key(key)
         if ticket is None:
             # if ticket does not exist, make sure we are signed out and leave
+            return None
+
+
+        # make sure the ticket is valid for this site
+        site = Site.get()
+        if not site.validate_ticket(ticket):
             return None
 
 

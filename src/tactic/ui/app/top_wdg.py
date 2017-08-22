@@ -98,11 +98,20 @@ class TopWdg(Widget):
             spt.body.focus_elements.push(el);
         }
 
+        spt.body.remove_focus_element = function(el) {
+            var index = spt.body.focus_elements.indexOf(el);
+            if (index != -1) {
+                spt.body.focus_elements.splice(index, 1);
+            }
+        }
+
         // find all of the registered popups and close them
         // NOTE: logic can handle more than 1 focus element should it happen ...
         spt.body.hide_focus_elements = function(evt) {
             var mouse = evt.client;
             var target = evt.target;
+
+
             
             var targets = [];
             var count = 0;
@@ -130,6 +139,12 @@ class TopWdg(Widget):
                     break;
                 }
 
+            }
+
+
+            var dialog = evt.target.getParent(".MooDialog");
+            if (dialog) {
+                targets.push(dialog);
             }
 
             // find out if any of the parents of target is the focus element
@@ -273,6 +288,25 @@ class TopWdg(Widget):
                 window.scrollTo(0,0);
             }
 
+            '''
+        } )
+
+
+
+        my.body.add_relay_behavior( {
+            'type': 'click',
+            'bvr_match_class': 'tactic_link',
+            'cbjs_action': '''
+            var href = bvr.src_el.getAttribute("href");
+            if (!href) {
+                spt.alert("No href defined for this link");
+                return;
+            }
+            var target = bvr.src_el.getAttribute("target");
+            if (!target) {
+                target = "_self";
+            }
+            window.open(href, target);
             '''
         } )
 
@@ -468,6 +502,22 @@ class TopWdg(Widget):
         # add the copyright
         widget.add( my.get_copyright_wdg() )
         widget.add(html)
+
+        # handle redirect
+        request_url = web.get_request_url().get_info().path
+        if request_url in ["/tactic/Index", "/Index", "/"]:
+            # if we have the root path name, provide the ability for the site to
+            # redirect
+            from pyasm.security import Site
+            site_obj = Site.get()
+            redirect = site_obj.get_site_redirect()
+            if redirect:
+                widget.add('''<meta http-equiv="refresh" content="0; url=%s">''' % redirect)
+                return widget
+
+
+
+
 
 
         # create the header
@@ -1217,13 +1267,19 @@ class SitePage(AppServer):
             through the ProjectSetting key top_wdg_cls, this class is used 
             except for TACTIC admin pages.
          3. The default widget used is tactic.ui.app.TopWdg.'''
-         
+
+
         top_wdg_cls = None
        
         if not my.hash and not my.custom_url:
             search = Search("config/url")
             search.add_filter("url", "/index")
             my.custom_url = search.get_sobject()
+
+        # TEST Using X-SendFile
+        #if my.hash and my.hash[0] == 'assets':
+        #    my.top = XSendFileTopWdg()
+        #    return my.top
         
         if my.custom_url:
             xml = my.custom_url.get_xml_value("widget")
@@ -1363,6 +1419,38 @@ class CustomTopWdg(BaseRefreshWdg):
 
         return widget
 
+
+
+class XSendFileTopWdg(BaseRefreshWdg):
+
+    def get_display(my):
+
+        rel_path = "workflow/assets/workflow/asset/Fantasy/Castle/54d45150c61251f65687d716cc3951f1_v001.jpg"
+
+        parts = rel_path.split("/")
+
+        site = parts[0]
+
+        parts = rel_path.split("/")
+
+        base_dir = "/spt/data/sites"
+        path = "%s/%s" % (base_dir, rel_path)
+
+        filename = os.path.basename(rel_path)
+
+        # determine the mimetype automatically
+        import mimetypes
+        base, ext = os.path.splitext(path)
+        mimetype = mimetypes.types_map[ext]
+
+        web = WebContainer.get_web()
+        response = web.get_response()
+        headers = response.headers
+        response.headers['Content-Type'] = mimetype
+        response.headers['Content-Disposition'] = 'inline; filename={0}'.format(filename)
+        response.headers['X-Sendfile'] = path
+
+        return Widget(path)
 
 
 
