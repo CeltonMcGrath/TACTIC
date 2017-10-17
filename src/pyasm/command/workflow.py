@@ -1122,20 +1122,30 @@ class WorkflowActionNodeHandler(BaseWorkflowNodeHandler):
             # for now set it to true
             ret_val = True
             for trigger in triggers:
-                info = trigger.get_info()
-                ret_val = info.get("result") or True
+                try:
+                    info = trigger.get_info()
+                except Exception, e:
+                    print "WARNING: trigger [%s] does not support get_info" % trigger
+                    continue
+
+                ret_val = info.get("result")
+                if ret_val == None:
+                    ret_val = True
 
                 # as soon as one trigger specifies a value other than
                 # true, that will take precedence
                 if ret_val not in [True, 'true']:
                     break
 
-        if ret_val == False:
+        if ret_val in [False, 'false']:
             Trigger.call(my, "process|reject", my.input)
+        elif ret_val in [True, 'true']:
+            Trigger.call(my, "process|complete", my.input)
         elif ret_val in ["block", "wait"]:
+            # NOTE: consider adding a "wait" message directly in the workflow
             pass
         else:
-            Trigger.call(my, "process|complete", my.input)
+            Trigger.call(my, "process|%s" % ret_val, my.input)
 
 
 
@@ -2006,6 +2016,15 @@ class CustomProcessConfig(object):
         handler = config.get_display_widget("process", extra_options)
         return handler
     get_process_handler = classmethod(get_process_handler)
+
+
+    def get_delete_handler(cls, node_type, extra_options={}):
+        config = cls.get_config(node_type)
+        extra_options['node_type'] = node_type
+        handler = config.get_display_widget("delete", extra_options)
+        return handler
+    get_delete_handler = classmethod(get_delete_handler)
+
 
 
 

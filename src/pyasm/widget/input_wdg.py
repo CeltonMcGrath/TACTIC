@@ -46,7 +46,7 @@ class BaseInputWdg(HtmlElement):
     get_args_keys = classmethod(get_args_keys)
 
 
-    #def __init__(my,name=None, type=None, label=None):
+    #def __init__(my, name=None, type=None, label=None):
     def __init__(my, name=None, type=None, label=None, **kwargs):
         super(BaseInputWdg,my).__init__(type)
 
@@ -1538,6 +1538,14 @@ class SelectWdg(BaseInputWdg):
                 behavior['cbjs_action'] = my.change_cbjs_action
             my.add_behavior(behavior)
 
+
+        onchange = my.get_option("onchange")
+        if onchange:
+            my.add_behavior( {
+                'type': 'change',
+                'cbjs_action': onchange
+            } )
+ 
 
 
 

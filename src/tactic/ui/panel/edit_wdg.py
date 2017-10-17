@@ -769,11 +769,17 @@ class EditWdg(BaseRefreshWdg):
                 show_title = True
 
 
-
             if show_title:
                 title = widget.get_title()
 
-                td = table.add_cell(title)
+                title_div = DivWdg()
+                title_div.add(title)
+                title_div.add_style("display: inline-block")
+                title_div.add_class("spt_edit_title")
+
+
+
+                td = table.add_cell(title_div)
                 td.add_style("padding: 15px 15px 10px 5px")
                 td.add_style("vertical-align: top")
 
@@ -1095,6 +1101,7 @@ class EditWdg(BaseRefreshWdg):
 
         show_action = my.kwargs.get("show_action")
         if show_action in [False, 'false']:
+            div.add_style("display: none")
             return div
 
 
