@@ -45,7 +45,7 @@ class TabWdg(BaseRefreshWdg):
  
     }
 
-    def get_onload_js(my):
+    def get_onload_js(self):
 
         return r'''
 
@@ -124,6 +124,41 @@ spt.tab.get_header = function(name) {
     }
     return null;
 }
+
+
+
+
+spt.tab.resize_headers = function() {
+
+    var top = spt.tab.top;
+    var header_top = top.getElement(".spt_tab_header_top");
+
+    var offset = 120;
+
+    var size = top.getSize();
+    top.spt_last_width = size.x;
+
+    var els = bvr.src_el.getElements(".spt_tab_header");
+    var count = els.length;
+    console.log("resize: " + count);
+
+
+    var width = parseInt((size.x-offset) / (count));
+    if (width > 120) {
+        width = 120;
+    }
+    if (width < 30) {
+        width = 30;
+    }
+
+    for (var i = 0; i < els.length; i++) {
+        els[i].setStyle("width", width);
+        var title_el = els[i].getElement(".spt_tab_header_label");
+        title_el.setStyle("width", width);
+    }
+}
+
+
 
 
 
@@ -250,8 +285,8 @@ spt.tab.add_new = function(element_name, title, class_name, kwargs,
         element_name = "__default__";
     }
 
-    var unique = false;
-    if (unique) {
+    var unique = kwargs.unique;
+    if (unique == true || unique == "true") {
         var header = spt.tab.get_header(element_name);
         if (header) {
             var num = Math.floor((Math.random()*10000)+1); 
@@ -295,6 +330,12 @@ spt.tab.add_new = function(element_name, title, class_name, kwargs,
    
     //var headers = header_top.getElements(".spt_tab_header");
     var headers = spt.tab.get_headers();
+
+    if (headers.length > 20) {
+        spt.alert("You have too many tabs open. Please close before opening any others.");
+        return;
+    }
+
     var header;
     var found = false;
     for (var k=0; k < headers.length; k++){
@@ -315,6 +356,10 @@ spt.tab.add_new = function(element_name, title, class_name, kwargs,
         var header = spt.behavior.clone(header_template);
         var header_id = Math.floor(Math.random()*10000000+1);
         header.setAttribute("id", header_id);
+
+        if (kwargs.hidden == "true") {
+            header.setStyle("display", "none");
+        }
 
 
         // add a subheader template for each header
@@ -356,6 +401,8 @@ spt.tab.add_new = function(element_name, title, class_name, kwargs,
         header.setAttribute("spt_tab_id", top_id);
         header.removeClass("spt_content_loaded");
         header.inject(last_header, "after");
+
+        spt.tab.resize_headers();
 
 
         var selected_header = spt.tab.get_selected_header();
@@ -448,23 +495,6 @@ spt.tab.add_new = function(element_name, title, class_name, kwargs,
     }
 
 
-    // This does nothing?
-    //else {
-    /*
-    if (true) {
-        var content_top = top.getElement(".spt_tab_content_top");
-        var content_boxes = content_top.getElements(".spt_tab_content");
-        for (var i=0; i < content_boxes.length; i++) {
-            var content_box = content_boxes[i];
-            var box_name = content_box.getAttribute("spt_element_name")
-            if (box_name == element_name) {
-                content_box.setAttribute("spt_element_name", element_name)
-                break;
-            }
-        }
-    }
-    */
-
 
     if (! class_name) {
         spt.tab.select(element_name);
@@ -499,6 +529,7 @@ spt.tab.add_new = function(element_name, title, class_name, kwargs,
     if (top.hasClass("spt_tab_save_state") ) {
         spt.tab.save_state();
     }
+
 
     return header;
 }
@@ -772,6 +803,9 @@ spt.tab.load_class = function(header, class_name, kwargs, values, force) {
                 }
 
                 if (force || ! content_box.hasClass("spt_content_loaded")) {
+
+                    var resize_offset = content_box.getAttribute("spt_window_resize_offset");
+
                     spt.panel.load(content_box, class_name, kwargs, values);
 
                     // update info on header
@@ -787,6 +821,11 @@ spt.tab.load_class = function(header, class_name, kwargs, values, force) {
                     content_box.setAttribute("spt_element_name", tab_element_name);
                     content_box.setAttribute("spt_tab_id", top_id);
                     content_box.setAttribute("spt_title", title);
+
+                    if (resize_offset) {
+                        content_box.setAttribute("spt_window_resize_offset", resize_offset);
+                    }
+
                 }
                 break;
             }
@@ -950,12 +989,18 @@ spt.tab.header_drag_action = function( evt, bvr, mouse_411) {
     var drag_pos = header.getPosition();
     if (spt.tab.dragging == false)
         return;
+
     
     var headers = spt.tab.get_headers();
     for ( var i = headers.length-1; i >= 0; i-- ) {
         if (headers[i] == header) {
             continue;
         }
+
+        if (headers[i].getStyle("display") == "none") {
+            continue;
+        }
+
         var pos = headers[i].getPosition();
 
         var size = headers[i].getSize();
@@ -973,7 +1018,7 @@ spt.tab.header_drag_action = function( evt, bvr, mouse_411) {
 
     }
 
-    bvr.drag_el.setStyle("position", "static");
+    bvr.drag_el.setStyle("position", "relative");
     bvr.drag_el.setStyle("z-index", "");
     bvr.drag_el.setStyle("top", "");
     bvr.drag_el.setStyle("left", "");
@@ -1061,6 +1106,7 @@ spt.tab.close = function(src_el) {
         spt.behavior.destroy_element(header);
         spt.behavior.destroy_element(content);
 
+        spt.tab.resize_headers();
 
 
         var last_element_name = spt.tab.get_last_selected_element_name();
@@ -1102,7 +1148,7 @@ spt.tab.close = function(src_el) {
 
 
 
-    def get_config_xml(my):
+    def get_config_xml(self):
         return '''
         <config>
         <tab>
@@ -1112,17 +1158,17 @@ spt.tab.close = function(src_el) {
         '''
 
 
-    def add_styles(my):
+    def add_styles(self):
 
-        my.use_default_style = my.kwargs.get("use_default_style")
-        if my.use_default_style not in [False, 'false']:
-            my.use_default_style = True
+        self.use_default_style = self.kwargs.get("use_default_style")
+        if self.use_default_style not in [False, 'false']:
+            self.use_default_style = True
         else:
-            my.use_default_style = False
+            self.use_default_style = False
 
-        if my.use_default_style:
+        if self.use_default_style:
 
-            palette = my.top.get_palette()
+            palette = self.top.get_palette()
             border = palette.color("border")
             color = palette.color("color")
             background = palette.color("background")
@@ -1131,7 +1177,7 @@ spt.tab.close = function(src_el) {
                 'border': border,
                 'color': color,
                 'background': background,
-                'header_id': my.header_id,
+                'header_id': self.header_id,
             }
 
 
@@ -1139,7 +1185,7 @@ spt.tab.close = function(src_el) {
             from pyasm.web import HtmlElement
 
             style = HtmlElement.style()
-            my.top.add(style)
+            self.top.add(style)
             style.add('''
             #%(header_id)s .spt_tab_header {
                 border-style: solid;
@@ -1148,6 +1194,8 @@ spt.tab.close = function(src_el) {
                 padding: 7px 5px;
                 color: %(color)s;
                 background: %(background)s;
+                height: 30px;
+                box-sizing: border-box;
             }
 
             #%(header_id)s .spt_tab_selected {
@@ -1170,48 +1218,48 @@ spt.tab.close = function(src_el) {
 
  
 
-    def get_display(my):
+    def get_display(self):
 
-        top = my.top
+        top = self.top
         top.add_class("spt_tab_top")
 
-        my.search_type = None
+        self.search_type = None
 
-        my.view = my.kwargs.get("view")
-        config_xml = my.kwargs.get("config_xml")
-        config = my.kwargs.get("config")
+        self.view = self.kwargs.get("view")
+        config_xml = self.kwargs.get("config_xml")
+        config = self.kwargs.get("config")
 
-        my.save_state = my.kwargs.get("save_state")
-        if my.save_state in [True, 'true']:
-            my.save_state = "save_state|main_tab"
+        self.save_state = self.kwargs.get("save_state")
+        if self.save_state in [True, 'true']:
+            self.save_state = "save_state|main_tab"
 
-        if my.save_state:
-            saved_config_xml = WidgetSettings.get_value_by_key(my.save_state)
+        if self.save_state:
+            saved_config_xml = WidgetSettings.get_value_by_key(self.save_state)
             if saved_config_xml:
                 config_xml = saved_config_xml
 
             top.add_class("spt_tab_save_state")
-            top.add_attr("spt_tab_save_state", my.save_state)
+            top.add_attr("spt_tab_save_state", self.save_state)
 
 
-        my.mode = my.kwargs.get('mode')
-        if not my.mode:
-            my.mode = "default"
+        self.mode = self.kwargs.get('mode')
+        if not self.mode:
+            self.mode = "default"
 
 
-        if my.view and my.view != 'tab' and not config_xml:
+        if self.view and self.view != 'tab' and not config_xml:
             config = None
 
             # if it is not defined in the database, look at a config file
-            includes = my.kwargs.get("include")
+            includes = self.kwargs.get("include")
             if includes:
                 includes = includes.split("|")
                 for include in includes:
                     tmp_path = __file__
                     dir_name = os.path.dirname(tmp_path)
                     file_path="%s/../config/%s" % (dir_name, include)
-                    config = WidgetConfig.get(file_path=file_path, view=my.view)
-                    if config and config.has_view(my.view):
+                    config = WidgetConfig.get(file_path=file_path, view=self.view)
+                    if config and config.has_view(self.view):
                         pass
                     else:
                         config = None
@@ -1220,23 +1268,23 @@ spt.tab.close = function(src_el) {
 
                 search = Search("config/widget_config")
                 search.add_filter("category", "TabWdg")
-                search.add_filter("view", my.view)
+                search.add_filter("view", self.view)
                 config_sobj = search.get_sobject()
                 if not config_sobj:
-                    config_xml = "<config><%s></%s></config>" % (my.view, my.view)
+                    config_xml = "<config><%s></%s></config>" % (self.view, self.view)
                 else:
                     config_xml = config_sobj.get_value("config")
-                config = WidgetConfig.get(view=my.view, xml=config_xml)
+                config = WidgetConfig.get(view=self.view, xml=config_xml)
         else:
 
             if config:
                 pass
             elif config_xml:
                 # this is for custom config_xml with a matching custom view
-                if not my.view:
-                    my.view = 'tab'
-                config = WidgetConfig.get(view=my.view, xml=config_xml)
-            elif my.widgets:
+                if not self.view:
+                    self.view = 'tab'
+                config = WidgetConfig.get(view=self.view, xml=config_xml)
+            elif self.widgets:
                 config_xml = '''
                 <config>
                 <tab></tab>
@@ -1251,20 +1299,27 @@ spt.tab.close = function(src_el) {
                 </tab>
                 </config>
                 '''
-                my.view = 'tab'
-                config = WidgetConfig.get(view=my.view, xml=config_xml)
+                self.view = 'tab'
+                config = WidgetConfig.get(view=self.view, xml=config_xml)
 
-        if config:
-            element_names = config.get_element_names()
-        else:
+
+        element_names = self.kwargs.get("element_names")
+        if element_names and isinstance(element_names, basestring):
+            element_names = element_names.split(",")
+
+        if not element_names:
+            if config:
+                element_names = config.get_element_names()
+        
+        if not element_names:
             element_names = []
 
 
         #top.add_style("padding: 10px")
-        my.unique_id = top.set_unique_id()
-        top.set_attr("spt_tab_id", my.unique_id)
+        self.unique_id = top.set_unique_id()
+        top.set_attr("spt_tab_id", self.unique_id)
 
-        top.set_attr("spt_tab_mode", my.mode)
+        top.set_attr("spt_tab_mode", self.mode)
 
         gradient = top.get_gradient("background", -5, 5)
 
@@ -1278,58 +1333,56 @@ spt.tab.close = function(src_el) {
             inner.add_behavior( {
             'type': 'load',
             'gradient': gradient,
-            'cbjs_action': my.get_onload_js()
+            'cbjs_action': self.get_onload_js()
             } )
 
 
         header_div = DivWdg()
-        header_div.add_class("spt_tab_header_top")
-        my.header_id = header_div.set_unique_id()
         inner.add(header_div)
+
+        header_div.add_class("spt_tab_header_top")
+        self.header_id = header_div.set_unique_id()
         header_div.add_style("height: auto")
-        header_div.add_style("overflow-y: hidden")
-        header_div.add_style("overflow-x: hidden")
         header_div.add_style("float: left")
         header_div.add_style("position: relative")
         header_div.add_style("z-index: 2")
 
-        #header_div.add_style("width: 100%")
         header_div.add_style("margin-bottom: -1px")
 
 
         subheader_div = DivWdg()
         subheader_div.add_class("spt_tab_subheader_top")
         inner.add(subheader_div)
-        my.add_subheader_behaviors(subheader_div)
+        self.add_subheader_behaviors(subheader_div)
         #subheader_div.add_style("display: none")
  
 
 
-        my.add_styles()
+        self.add_styles()
 
 
         # if a search_key has been passed in, add it to the state.
-        state = my.kwargs.get("state")
+        state = self.kwargs.get("state")
         if not state:
-            state = my.kwargs
+            state = self.kwargs
 
-        search_key = my.kwargs.get("search_key")
+        search_key = self.kwargs.get("search_key")
         if search_key:
             state['search_key'] = search_key
 
-        selected = my.kwargs.get("selected")
+        selected = self.kwargs.get("selected")
         if not selected:
             if element_names:
                 selected = element_names[0]
             else:
                 selected = ''
 
-        offset = my.kwargs.get("tab_offset")
+        offset = self.kwargs.get("tab_offset")
         if offset:
             header_div.add_style("padding-left: %s" % offset)
 
 
-        if my.mode == "hidden":
+        if self.mode == "hidden":
             header_div.add_style("display: none")
 
 
@@ -1337,7 +1390,121 @@ spt.tab.close = function(src_el) {
 
         title_dict = {}
 
-        my.add_context_menu( header_div )
+        self.add_context_menu( header_div )
+
+
+        header_div.add_style("width: 100%")
+
+        min_width = self.kwargs.get("min_width")
+        if min_width:
+            header_div.add_style("min-width", min_width)
+
+
+        header_div.add_style("text-align: left")
+        header_div.add_style("box-sizing: border-box")
+
+        resize_headers = True
+        if resize_headers:
+            header_div.add_style("white-space", "nowrap");
+
+            offset = 120;
+            header_div.add_behavior( { 
+                'type': 'load',
+                'offset': offset,
+                'cbjs_action': '''
+
+                var top = bvr.src_el;
+                top.spt_last_width = 0;
+
+                var offset = bvr.offset;
+
+                setInterval( function() {
+
+                    if (!top.isVisible() ) {
+                        return;
+                    }
+
+                    var size = top.getSize();
+                    if (size.x == top.spt_last_width) {
+                        return;
+                    }
+
+                    top.spt_last_width = size.x;
+
+                    var els = bvr.src_el.getElements(".spt_tab_header");
+                    var count = els.length;
+
+
+                    var width = parseInt((size.x-offset) / (count));
+                    if (width > 120) {
+                        width = 120;
+                    }
+
+                    if (width < 30) {
+                        width = 30;
+                    }
+
+
+                    for (var i = 0; i < els.length; i++) {
+                        els[i].setStyle("width", width);
+                        var title_el = els[i].getElement(".spt_tab_header_label");
+                        title_el.setStyle("width", width);
+                    }
+
+                }, 250);
+                '''
+            } )
+
+
+
+
+
+        show_remove = self.kwargs.get("show_remove")
+
+        if show_remove == "hover":
+
+            header_div.add_relay_behavior( {
+                'type': 'mouseenter',
+                'bvr_match_class': 'spt_tab_header',
+                'cbjs_action': '''
+                var el = bvr.src_el.getElement(".spt_tab_remove");
+                el.setStyle("display", "");
+                '''
+
+            } )
+
+            header_div.add_relay_behavior( {
+                'type': 'mouseleave',
+                'bvr_match_class': 'spt_tab_header',
+                'cbjs_action': '''
+                var el = bvr.src_el.getElement(".spt_tab_remove");
+                el.setStyle("display", "none");
+                '''
+
+            } )
+
+
+
+        header_div.add_relay_behavior( {
+        'type': 'mouseenter',
+        'bvr_match_class': 'spt_tab_remove',
+        'cbjs_action': '''
+        var active = bvr.src_el.getElement(".spt_icon_active");
+        active.setStyle("opacity", 1.0);
+        '''
+        } )
+
+
+        header_div.add_relay_behavior( {
+        'type': 'mouseleave',
+        'bvr_match_class': 'spt_tab_remove',
+        'cbjs_action': '''
+        console.log("exit");
+        var active = bvr.src_el.getElement(".spt_icon_active");
+        active.setStyle("opacity", 0.3);
+        '''
+        } )
+
 
 
         loaded_dict = {}
@@ -1388,13 +1555,13 @@ spt.tab.close = function(src_el) {
             else:
                 is_selected = False
 
-            header = my.get_tab_header(element_name, title, display_class, display_options, is_selected=is_selected, is_loaded=is_loaded, is_template=False, attrs=attrs)
+            header = self.get_tab_header(element_name, title, display_class, display_options, is_selected=is_selected, is_loaded=is_loaded, is_template=False, attrs=attrs)
             header_div.add(header)
 
 
 
         # add widgets that have been manually added
-        for i, widget in enumerate(my.widgets):
+        for i, widget in enumerate(self.widgets):
             name = widget.get_name()
             if not name:
                 import random
@@ -1422,18 +1589,18 @@ spt.tab.close = function(src_el) {
                 kwargs = {}
                 
 
-            header = my.get_tab_header(name, title, class_name, kwargs, is_selected=is_selected, is_loaded=True, is_template=False)
+            header = self.get_tab_header(name, title, class_name, kwargs, is_selected=is_selected, is_loaded=True, is_template=False)
             header_div.add(header)
 
 
-        show_add = my.kwargs.get("show_add") not in [False, "false"]
+        show_add = self.kwargs.get("show_add") not in [False, "false"]
         if show_add:
-            inner.add( my.get_add_wdg() )
+            header_div.add( self.get_add_wdg() )
 
         # should only be seen by admin
         #security = Environment.get_security()
         #if security.check_access("builtin", "view_site_admin", "allow"):
-        #    inner.add( my.get_edit_wdg() )
+        #    inner.add( self.get_edit_wdg() )
 
 
         inner.add("<br clear='all'>")
@@ -1442,13 +1609,15 @@ spt.tab.close = function(src_el) {
         content_top = DivWdg()
         content_top.add_class("spt_tab_content_top")
         content_top.add_style("z-index: 1")
-        #content_top.add_style("margin-top: -1px")
+        content_top.add_style("margin-top: -1px")
+        #content_top.add_style("box-sizing: border-box")
+
 
         # add a div so that it breaks correctly
-        if my.mode == 'default':
-            content_top.add("<div style='height:5px'></div>")
+        if self.mode == 'default':
+            #content_top.add("<div style='height:5px'></div>")
             content_top.set_round_corners(5, corners=['TR','BR','BL'])
-            border = my.kwargs.get("border_color")
+            border = self.kwargs.get("border_color")
             if not border:
                 palette = content_top.get_palette()
                 border = palette.color("border")
@@ -1456,24 +1625,48 @@ spt.tab.close = function(src_el) {
 
         inner.add(content_top)
 
-        height = my.kwargs.get("height")
-        if height:
-            content_top.add_style("height: %s" % height)
-            content_top.add_style("overflow-y: auto")
-
-            content_top.add_style("min-height: %s" % height)
 
 
+        resize_offset = self.kwargs.get("resize_offset")
+        if resize_offset != None:
+            content_top.add_class("spt_window_resize")
+            content_top.add_attr("spt_window_resize_offset", resize_offset)
+            #content_top.add_style("overflow: auto")
+            content_top.add_style("overflow: none")
 
-        width = my.kwargs.get("width")
+        else:
+
+            height = self.kwargs.get("height")
+            if height:
+                content_top.add_style("height: %s" % height)
+                content_top.add_style("overflow-y: auto")
+
+                content_top.add_style("min-height: %s" % height)
+
+
+            else:
+                # TODO: make this configurable
+                content_top.add_style("min-height: 500px")
+
+
+
+        width = self.kwargs.get("width")
         if not width:
             content_top.add_style("min-width: 500px")
         else:
             content_top.add_style("min-width: %s" % width)
 
+        min_width = self.kwargs.get("min_width")
+        if min_width:
+            content_top.add_style("min-width", min_width)
+
+
+
+
+
         content_top.add_class("tab_content_top")
 
-        color_mode = my.kwargs.get("color_mode")
+        color_mode = self.kwargs.get("color_mode")
         if color_mode == "transparent":
             pass
         else:
@@ -1495,19 +1688,26 @@ spt.tab.close = function(src_el) {
 
 
 
-
         # put in a content box for each element
         for element_name in element_names:
             content_div = DivWdg()
+            content_top.add(content_div)
+
+
             content_div.add_class("spt_tab_content")
-            content_div.add_attr("spt_tab_id", my.unique_id)
+            content_div.add_attr("spt_tab_id", self.unique_id)
             content_div.add_attr("spt_element_name", element_name)
+
+            resize_offset = self.kwargs.get("resize_offset")
+            if resize_offset != None:
+                content_div.add_class("spt_window_resize")
+                content_div.add_attr("spt_window_resize_offset", resize_offset)
+                content_div.add_style("overflow: auto")
 
             
             content_div.add_style("width: 100%")
-            #content_div.add_style("height: 100%")
+            #content_div.add_style("box-sizing: border_box")
             content_div.add_style("text-align: left")
-            content_top.add(content_div)
             
             is_loaded = loaded_dict.get(element_name)
             if element_name == selected or is_loaded:
@@ -1553,13 +1753,22 @@ spt.tab.close = function(src_el) {
 
 
 
-        for widget in my.widgets:
+        for widget in self.widgets:
             name = widget.get_name()
             content_div = DivWdg()
             content_div.add_class("spt_tab_content")
-            content_div.add_attr("spt_tab_id", my.unique_id)
+            content_div.add_attr("spt_tab_id", self.unique_id)
             content_div.add_class("spt_content_loaded")
             content_div.add_attr("spt_element_name", name)
+
+
+            resize_offset = self.kwargs.get("resize_offset")
+            if resize_offset != None:
+                content_div.add_class("spt_window_resize")
+                content_div.add_attr("spt_window_resize_offset", resize_offset)
+                content_div.add_style("overflow: auto")
+
+
 
             title = title_dict.get(name)
             content_div.add_attr("spt_title", title)
@@ -1573,6 +1782,8 @@ spt.tab.close = function(src_el) {
 
 
 
+
+
         # Add in a template
         template_div = DivWdg()
         template_div.add_class("spt_tab_template_top")
@@ -1581,12 +1792,12 @@ spt.tab.close = function(src_el) {
         name = ""
         title = ""
         is_selected = False
-        header = my.get_tab_header(name, title, None, None, is_selected=is_selected, is_template=True)
+        header = self.get_tab_header(name, title, None, None, is_selected=is_selected, is_template=True)
         template_div.add(header)
 
 
         # subheader test
-        subheader = my.get_tab_subheader(name, title, None, None, is_selected=is_selected, is_template=True, config=config)
+        subheader = self.get_tab_subheader(name, title, None, None, is_selected=is_selected, is_template=True, config=config)
         template_div.add(subheader)
         subheader.add_style("z-index: 3")
 
@@ -1630,7 +1841,7 @@ spt.tab.close = function(src_el) {
         content_div = DivWdg()
         content_div.add_class("spt_tab_content")
         content_div.add_attr("spt_element_name", "NEW")
-        content_div.add_attr("spt_tab_id", my.unique_id)
+        content_div.add_attr("spt_tab_id", self.unique_id)
         content_div.add("")
         content_div.add_style("width: 100%")
         #content_div.add_style("height: 100%")
@@ -1640,10 +1851,11 @@ spt.tab.close = function(src_el) {
         return top
 
 
-    def get_add_wdg(my):
+    def get_add_wdg(self):
 
         div = DivWdg()
         div.add_style("margin-left: -2px")
+        div.add_style("display: inline-block")
 
         icon_div = DivWdg()
         icon_div.add_style("padding: 0 2px 0 2px")
@@ -1680,8 +1892,8 @@ spt.tab.close = function(src_el) {
         icon_div.add_style("text-align: center")
         div.add(icon_div);
 
-        my.extra_menu = my.kwargs.get("extra_menu")
-        if my.extra_menu:
+        self.extra_menu = self.kwargs.get("extra_menu")
+        if self.extra_menu:
             icon_div = DivWdg()
             icon_div.set_round_corners(3, corners=['TR'])
             from tactic.ui.widget import IconButtonWdg
@@ -1690,7 +1902,7 @@ spt.tab.close = function(src_el) {
 
             icon_div.add(icon)
             from smart_menu_wdg import SmartMenu
-            smenu_set = SmartMenu.add_smart_menu_set( icon_div, { 'BUTTON_MENU': my.extra_menu } )
+            smenu_set = SmartMenu.add_smart_menu_set( icon_div, { 'BUTTON_MENU': self.extra_menu } )
             SmartMenu.assign_as_local_activator( icon_div, "BUTTON_MENU", True )
 
             icon_div.add_style("padding-top: 4px")
@@ -1711,7 +1923,7 @@ spt.tab.close = function(src_el) {
 
 
 
-    def get_edit_wdg(my):
+    def get_edit_wdg(self):
 
         div = DivWdg()
         div.add_style("margin-left: -2px")
@@ -1751,7 +1963,7 @@ spt.tab.close = function(src_el) {
 
 
 
-    def add_context_menu(my, header_div):
+    def add_context_menu(self, header_div):
 
         from menu_wdg import Menu, MenuItem
         menu = Menu(width=180)
@@ -1799,7 +2011,27 @@ spt.tab.close = function(src_el) {
         menu.add(menu_item)
 
 
+        menu_item = MenuItem(type='action', label='Rename Tab')
+        menu_item.add_behavior( {
+            'cbjs_action': '''
+            var class_name = 'tactic.ui.container.TabRenameWdg';
+            var kwargs = {};
 
+            var activator = spt.smenu.get_activator(bvr);
+            var label = activator.getElement(".spt_tab_header_label");
+            name = label.innerHTML;
+
+            title = "Raname Tab ["+name+"]";
+            var popup = spt.panel.load_popup(title, class_name, kwargs);
+            popup.activator = activator;
+
+
+            '''
+        } )
+        menu.add(menu_item)
+
+
+        """
         menu_item = MenuItem(type='action', label='New Tab')
         menu_item.add_behavior( {
             'cbjs_action': '''
@@ -1810,6 +2042,7 @@ spt.tab.close = function(src_el) {
             '''
         } )
         menu.add(menu_item)
+        """
 
 
 
@@ -1886,7 +2119,7 @@ spt.tab.close = function(src_el) {
 
 
 
-        if my.kwargs.get("show_remove") not in ['false', False]: 
+        if self.kwargs.get("show_remove") not in ['false', False]: 
             menu_item = MenuItem(type='separator')
             menu.add(menu_item)
             menu_item = MenuItem(type='action', label='Close Tab')
@@ -2084,7 +2317,7 @@ spt.tab.close = function(src_el) {
 
 
 
-                var view = "my_view_" + login;
+                var view = "self_view_" + login;
 
                 try {
 
@@ -2105,7 +2338,7 @@ spt.tab.close = function(src_el) {
 
 
 
-        if my.kwargs.get("show_context_menu") not in ['false', False]:
+        if self.kwargs.get("show_context_menu") not in ['false', False]:
             menus = [menu.get_data()]
             menus_in = {
                 'DG_HEADER_CTX': menus,
@@ -2118,19 +2351,19 @@ spt.tab.close = function(src_el) {
 
 
 
-    def get_tab_header(my, element_name, title, class_name=None, kwargs=None, is_selected=False, is_loaded=False, is_template=False, attrs={}):
+    def get_tab_header(self, element_name, title, class_name=None, kwargs=None, is_selected=False, is_loaded=False, is_template=False, attrs={}):
 
 
         web = WebContainer.get_web()
 
         header = DivWdg()
         header.add_class("spt_tab_header")
-        header.add_attr("spt_tab_id", my.unique_id)
+        header.add_attr("spt_tab_id", self.unique_id)
         header.add_class("hand")
 
         header.add_style("overflow: hidden")
 
-        if my.use_default_style:
+        if self.use_default_style:
             header.set_round_corners(5, corners=['TL','TR'])
 
 
@@ -2140,8 +2373,13 @@ spt.tab.close = function(src_el) {
         #header.add_style("padding: 7px 5px")
         #header.add_color("color", "color")
 
-        header.add_style("float: left")
+        #header.add_style("float: left")
+        header.add_style("display: inline-block")
+        header.add_style("vertical-align: top")
         header.add_style("margin-right: 1px")
+
+        # TODO: this should be the default
+        #header.add_style("box-sizing: border-box")
 
 
         if is_selected:
@@ -2212,8 +2450,12 @@ spt.tab.close = function(src_el) {
         if count:
             count_color = attrs.get("count_color")
 
-            state = my.kwargs.get("state") or {}
+            state = self.kwargs.get("state") or {}
             search_key = state.get("search_key")
+
+            if not search_key:
+                search_key = self.kwargs.get("search_key")
+
             if search_key:
                 sobject = Search.get_by_search_key(search_key)
             else:
@@ -2226,6 +2468,7 @@ spt.tab.close = function(src_el) {
                 title_div.add(count_wdg)
                 count_wdg.add_style("float: right")
                 count_wdg.add_style("font-size: 0.7em")
+                count_wdg.add_style("margin-right: 10px")
                 if count_color:
                     count_wdg.add_style("background", count_color)
 
@@ -2237,77 +2480,79 @@ spt.tab.close = function(src_el) {
 
 
 
-        title_div.add_style("min-width: 100px")
-        title_div.add_style("text-align: left")
-        title_div.add_style("overflow: hidden")
-        title_div.add_attr("nowrap", "nowrap")
-        title_div.add_style("float: left")
+
+        #if self.use_default_style:
+        if True:
+            title_div.add_style("text-align: left")
+            title_div.add_style("overflow: hidden")
+            title_div.add_style("text-overflow: ellipsis")
+            title_div.add_style("white-space", "nowrap");
+            #title_div.add_style("float: left")
+            title_div.add_style("z-index: 1")
+            title_div.add_style("width: 100%")
+
+
         title_div.add_class("spt_tab_header_label");
-        #title_div.add_style("text-overflow: ellipsis")
-        if len(title) > 20:
-            display_title = "%s..." % title[:18]
-        else:
-            display_title = title
+        display_title = title
         title_div.add(display_title)
         header.add(title_div)
 
 
 
-        title_div.add_attr("title", "%s (%s)" % (title, element_name))
+        title_div.add_attr("title", "%s" % (title))
 
         remove_wdg = DivWdg()
+        remove_wdg.add_class("spt_tab_remove")
 
-        show_remove = my.kwargs.get("show_remove")
-        if is_template or show_remove not in [False, 'false']:
-            header.add(remove_wdg)
-        #header.add(remove_wdg)
-
-
-
-
-        remove_wdg.add_styles("float: right; position: relative; padding-right: 14px")
-        from pyasm.widget import IconButtonWdg
-        #icon = IconButtonWdg("Remove Tab", IconWdg.CLOSE_INACTIVE)
-        icon = IconWdg("Remove Tab", "BS_REMOVE", opacity=0.3)
-        icon.add_class("spt_icon_inactive")
-        icon.add_styles("margin: auto;position: absolute;top: 0;bottom: 0; max-height: 100%")
-        remove_wdg.add(icon)
-        #icon = IconButtonWdg("Remove Tab", IconWdg.CLOSE_ACTIVE)
-        icon = IconWdg("Remove Tab", "BS_REMOVE")
-        icon.add_class("spt_icon_active")
-        icon.add_style("display: none")
-        icon.add_styles("margin: auto;position: absolute;top: 0;bottom: 0; max-height: 100%")
-        remove_wdg.add(icon)
-        
-
-        remove_wdg.add_behavior( {
-        'type': 'hover',
-        'cbjs_action_over': '''
-        var inactive = bvr.src_el.getElement(".spt_icon_inactive");
-        var active = bvr.src_el.getElement(".spt_icon_active");
-        spt.show(active);
-        spt.hide(inactive);
-        ''',
-        'cbjs_action_out': '''
-        var inactive = bvr.src_el.getElement(".spt_icon_inactive");
-        var active = bvr.src_el.getElement(".spt_icon_active");
-        spt.show(inactive);
-        spt.hide(active);
-        '''
-        })
 
         remove_wdg.add_behavior( {
         'type': 'click',
         'cbjs_action': '''
-            spt.tab.close(bvr.src_el); 
+        spt.tab.close(bvr.src_el); 
         '''
         } )
 
 
+
+        show_remove = self.kwargs.get("show_remove")
+        if is_template or show_remove not in [False, 'false']:
+            header.add(remove_wdg)
+
+
+        if show_remove == "hover":
+            remove_wdg.add_style("display: none")
+
+        #remove_wdg.add_style("float: right")
+        #remove_wdg.add_style("position: relative")
+        #remove_wdg.add_style("padding-right: 10px")
+
+
+        remove_wdg.add_style("position: absolute")
+        remove_wdg.add_style("right: 2px")
+        remove_wdg.add_style("top: 8px")
+        remove_wdg.add_style("z-index: 2")
+        remove_wdg.add_style("width: 15px")
+        remove_wdg.add_style("height: 15px")
+        remove_wdg.add_style("padding-left: 2px")
+
+        remove_wdg.add_style("border-radius: 10px")
+        remove_wdg.add_style("box-sizing: border-box")
+        remove_wdg.add_style("color: #000")
+        remove_wdg.add_style("background: #FFF")
+        remove_wdg.add_style("border: solid 1px transparent")
+
+
+
+        icon = IconWdg("Remove Tab", "FA_REMOVE", size=12)
+        icon.add_class("spt_icon_active")
+        icon.add_styles("margin: auto;position: absolute;top: 0;bottom: 0; max-height: 100%; opacity: 0.3;")
+        remove_wdg.add(icon)
         
 
+       
+
         # add a drag behavior
-        allow_drag = my.kwargs.get("allow_drag")
+        allow_drag = self.kwargs.get("allow_drag")
         if allow_drag not in [False, 'false']:
             header.add_style("position", "relative");
             header.add_behavior( {
@@ -2324,7 +2569,7 @@ spt.tab.close = function(src_el) {
 
 
 
-    def get_tab_subheader(my, element_name, title, class_name=None, kwargs=None, is_selected=False, is_loaded=False, is_template=False, config=None):
+    def get_tab_subheader(self, element_name, title, class_name=None, kwargs=None, is_selected=False, is_loaded=False, is_template=False, config=None):
 
         subheader_div = DivWdg()
         subheader_div.add_class("spt_tab_subheader")
@@ -2393,7 +2638,7 @@ spt.tab.close = function(src_el) {
 
 
 
-    def add_subheader_behaviors(my, subheader_top):
+    def add_subheader_behaviors(self, subheader_top):
 
         subheader_top.set_unique_id()
         subheader_top.add_smart_style("spt_tab_subheader_item", "pointer", "cursor")
@@ -2445,18 +2690,88 @@ spt.tab.close = function(src_el) {
 
 
 
+__all__.append("TabRenameWdg")
+class TabRenameWdg(BaseRefreshWdg):
 
+    def get_display(self):
+
+        top = self.top
+        top.add_style("margin: 20px")
+
+        top.add_class("spt_tab_rename_top")
+
+        top.add("<div>New Name:</div>")
+
+        from tactic.ui.input import TextInputWdg
+        from tactic.ui.widget import ActionButtonWdg
+
+        text = TextInputWdg(name="new_name")
+        text.add_class("spt_tab_new_name")
+        top.add(text)
+
+        text.add_behavior( {
+            'type': 'load',
+            'cbjs_action': 'bvr.src_el.focus()'
+        } )
+
+
+
+        top.add("<br/>")
+
+        button = ActionButtonWdg(title="Rename", color="basic")
+        top.add(button)
+        button.add_style("float: right")
+
+
+
+        button.add_behavior( {
+            'type': 'click',
+            'cbjs_action': '''
+            var popup = bvr.src_el.getParent(".spt_popup");
+            var activator = popup.activator
+
+            var rename_top = bvr.src_el.getParent(".spt_tab_rename_top");
+            var input = rename_top.getElement(".spt_tab_new_name");
+            new_name = input.value
+
+            spt.popup.close(popup);
+
+            var label = activator.getElement(".spt_tab_header_label");
+            label.innerHTML = new_name;
+
+            label.setAttribute("title", new_name);
+            activator.setAttribute("spt_title", new_name);
+
+            var top = spt.tab.top;
+            if (!top) {
+                spt.tab.set_main_body_tab();
+                top = spt.tab.top;
+            }
+
+            if (top.hasClass("spt_tab_save_state") ) {
+                spt.tab.save_state();
+            }
+
+            
+            '''
+        } )
+
+
+        top.add("<br clear='all'/>")
+
+
+        return top
 
 
 
 from pyasm.command import Command
 class TabSaveStateCmd(Command):
-    def execute(my):
+    def execute(self):
 
-        class_names = my.kwargs.get("class_names")
-        attrs_list = my.kwargs.get("attrs_list")
-        kwargs_list = my.kwargs.get("kwargs_list")
-        save_state = my.kwargs.get("save_state")
+        class_names = self.kwargs.get("class_names")
+        attrs_list = self.kwargs.get("attrs_list")
+        kwargs_list = self.kwargs.get("kwargs_list")
+        save_state = self.kwargs.get("save_state")
 
         xml = Xml()
         xml.create_doc("config")

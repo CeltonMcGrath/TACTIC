@@ -27,48 +27,52 @@ from tactic.ui.widget import ActionButtonWdg, IconButtonWdg
 
 class BaseNodeWdg(BaseRefreshWdg):
 
-    def get_node_type(my):
-        return my.kwargs.get("node_type")
+    def get_node_type(self):
+        return self.kwargs.get("node_type")
 
-    def get_title(my):
-        node_type = my.get_node_type()
+    def get_title(self):
+        node_type = self.get_node_type()
         title = Common.get_display_title(node_type)
         return title
 
-    def get_title_background(my):
+    def get_title_background(self):
         return "rgba(0,0,0,0.5)"
 
-    def get_width(my):
+
+    def show_default_name(self):
+        return True
+
+    def get_width(self):
         return 120
 
-    def get_height(my):
+    def get_height(self):
         return 40
 
-    def get_border_radius(my):
+    def get_border_radius(self):
         return 0
 
-    def get_nob_offset(my):
+    def get_nob_offset(self):
         return 0
 
-    def get_node_behaviors(my):
+    def get_node_behaviors(self):
         return []
 
-    def get_content(my):
+    def get_content(self):
         return DivWdg()
 
-    def get_shape(my):
+    def get_shape(self):
         return ""
 
 
-    def get_content(my):
-        node_type = my.get_node_type()
+    def get_content(self):
+        node_type = self.get_node_type()
         div = DivWdg()
 
-        title = my.get_title()
+        title = self.get_title()
         if not title:
             return div
 
-        title_background = my.get_title_background()
+        title_background = self.get_title_background()
 
         inner = DivWdg()
         div.add(inner)
@@ -83,26 +87,27 @@ class BaseNodeWdg(BaseRefreshWdg):
         return div
 
 
-    def get_display(my):
+    def get_display(self):
 
-        top = my.top
+
+        top = self.top
         top.add_style("overflow: hidden")
         top.add_class("spt_custom_node")
 
-        width = my.get_width()
-        height = my.get_height()
+        width = self.get_width()
+        height = self.get_height()
 
 
-        border_radius = my.get_border_radius()
+        border_radius = self.get_border_radius()
         top.add_style("width", width)
         top.add_style("height", height)
 
-        shape = my.get_shape()
+        shape = self.get_shape()
         if shape == "star":
-            my.set_star_shape()
+            self.set_star_shape()
 
         elif shape == "parallelogram":
-            my.set_parallelogram_shape()
+            self.set_parallelogram_shape()
 
         elif shape == "circle":
             top.add_style("border-radius: %spx" % (height/2))
@@ -121,32 +126,32 @@ class BaseNodeWdg(BaseRefreshWdg):
         content_div.add_style("overflow: hidden")
         top.add(content_div)
 
-        content = my.get_content()
+        content = self.get_content()
         content_div.add(content)
         content.add_class("spt_content")
         content.add_style("width", "100%")
         content.add_style("height", "100%")
 
 
-        for widget in my.widgets:
+        for widget in self.widgets:
             top.add(widget)
 
         return top
 
 
-    def set_parallelogram_shape(my):
-        div = my.top
+    def set_parallelogram_shape(self):
+        div = self.top
         div.add_style("-webkit-transform: skew(20deg)")
         div.add_style("-moz-transform: skew(20deg)")
         div.add_style("-o-transform: skew(20deg)")
         div.add_border()
 
 
-    def set_star_shape(my):
+    def set_star_shape(self):
 
         # FIXME: this doesn't work too well yet
 
-        div = my.top
+        div = self.top
 
         star = DivWdg()
         div.add(star)
@@ -182,24 +187,24 @@ class BaseNodeWdg(BaseRefreshWdg):
 class PipelineCanvasWdg(BaseRefreshWdg):
     '''Pipeline Widget'''
 
-    def init(my):
-        my.top = DivWdg()
-        my.set_as_panel(my.top)
-        my.top.add_class("spt_pipeline_top")
-        my.unique_id = my.top.set_unique_id();
+    def init(self):
+        self.top = DivWdg()
+        self.set_as_panel(self.top)
+        self.top.add_class("spt_pipeline_top")
+        self.unique_id = self.top.set_unique_id();
 
-        my.is_editable = my.kwargs.get("is_editable")
-        if my.is_editable in ['false', False]:
-            my.is_editable = False
+        self.is_editable = self.kwargs.get("is_editable")
+        if self.is_editable in ['false', False]:
+            self.is_editable = False
         else:
-            my.is_editable = True
-        #my.is_editable = False
+            self.is_editable = True
+        #self.is_editable = False
 
-    def get_unique_id(my):
-        return my.unique_id
+    def get_unique_id(self):
+        return self.unique_id
 
 
-    def get_canvas_title(my):
+    def get_canvas_title(self):
 
         canvas_title = DivWdg()
         canvas_title.add_border()
@@ -208,11 +213,12 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         canvas_title.add_style("font-weight: bold")
         canvas_title.add_style("top: 0px")
         canvas_title.add_style("left: 0px")
-        canvas_title.add_style("z-index: 50")
+        canvas_title.add_style("z-index: 150")
 
         canvas_title.add_class("spt_pipeline_editor_current2")
+        canvas_title.add_class("hand")
         canvas_title.add_relay_behavior( {
-            'type': 'mouseup',
+            'type': 'click',
             'bvr_match_class': 'spt_pipeline_link',
             'cbjs_action': '''
             spt.pipeline.clear_canvas();
@@ -253,46 +259,46 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         return canvas_title
 
 
-    def get_display(my):
+    def get_display(self):
 
-        top = my.top
+        top = self.top
 
-        my.width = my.kwargs.get("width")
-        if not my.width:
-            my.width = "auto"
-        my.height = my.kwargs.get("height")
-        if not my.height:
-            my.height = 600
+        self.width = self.kwargs.get("width")
+        if not self.width:
+            self.width = "auto"
+        self.height = self.kwargs.get("height")
+        if not self.height:
+            self.height = 600
 
 
         # create an inner and outer divs
-        my.nob_mode = my.kwargs.get('nob_mode')
-        if not my.nob_mode:
-            my.nob_mode = "visible"
+        self.nob_mode = self.kwargs.get('nob_mode')
+        if not self.nob_mode:
+            self.nob_mode = "visible"
 
-        my.line_mode = my.kwargs.get('line_mode')
-        if not my.line_mode:
-            my.line_mode = "bezier"
+        self.line_mode = self.kwargs.get('line_mode')
+        if not self.line_mode:
+            self.line_mode = "bezier"
 
 
-        my.has_prefix = my.kwargs.get('has_prefix')
-        if my.has_prefix in [True, 'true']:
-            my.has_prefix = True
+        self.has_prefix = self.kwargs.get('has_prefix')
+        if self.has_prefix in [True, 'true']:
+            self.has_prefix = True
         else:
-            my.has_prefix = False
+            self.has_prefix = False
 
-        my.filter_node_name = my.kwargs.get('filter_node_name')
-        if my.filter_node_name in [True, 'true']:
-            my.filter_node_name = True
+        self.filter_node_name = self.kwargs.get('filter_node_name')
+        if self.filter_node_name in [True, 'true']:
+            self.filter_node_name = True
         else:
-            my.filter_node_name = False
+            self.filter_node_name = False
             
 
         top.add_style("position: relative")
 
-        show_title = my.kwargs.get("show_title")
+        show_title = self.kwargs.get("show_title")
         if show_title not in ['false', False]:
-            top.add(my.get_canvas_title())
+            top.add(self.get_canvas_title())
 
 
         # outer is used to resize canvas
@@ -305,19 +311,19 @@ class PipelineCanvasWdg(BaseRefreshWdg):
 
         outer.add_style("overflow: hidden")
 
-        if my.kwargs.get("show_border") not in [False, 'false']:
+        if self.kwargs.get("show_border") not in [False, 'false']:
             outer.add_border()
 
         # set the size limit
-        outer.add_style("width: %s" % my.width)
-        outer.add_style("height: %s" % my.height)
+        outer.add_style("width: %s" % self.width)
+        outer.add_style("height: %s" % self.height)
 
-        process_menu = my.get_node_context_menu()
+        process_menu = self.get_node_context_menu()
         menus = [process_menu.get_data()]
 
         # Simple context menu is for renaming and 
         # deleting approval, action and condition nodes..        
-        simple_menu = my.get_simple_node_context_menu()
+        simple_menu = self.get_simple_node_context_menu()
         simple_menus = [simple_menu.get_data()]   
     
         menus_in = {
@@ -331,7 +337,7 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         # inner is used to scale
         inner = DivWdg()
         outer.add(inner)
-        outer.add_color("background", "background", -2)
+        #outer.add_color("background", "background", -2)
         inner.add_class("spt_pipeline_scale")
         inner.add_style("z-index: 100")
         inner.add_style("position: relative")
@@ -346,7 +352,7 @@ class PipelineCanvasWdg(BaseRefreshWdg):
             script = DivWdg()
             script.add_behavior( {
             'type': 'load',
-            'cbjs_action': my.get_onload_js()
+            'cbjs_action': self.get_onload_js()
             } )
             inner.add(script)
 
@@ -364,8 +370,8 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         inner.add(canvas)
         
         canvas.add_class("spt_pipeline_canvas")
-        canvas.add_style("width: %s" % my.width)
-        canvas.add_style("height: %s" % my.height)
+        canvas.add_style("width: %s" % self.width)
+        canvas.add_style("height: %s" % self.height)
         canvas.add_style("z-index: 200")
  
      
@@ -391,7 +397,7 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         } )
 
 
-        if my.kwargs.get("use_mouse_wheel") in [True, 'true']:
+        if self.kwargs.get("use_mouse_wheel") in [True, 'true']:
             canvas.add_behavior( {
             "type": 'wheel',
             "cbjs_action": '''
@@ -417,11 +423,11 @@ class PipelineCanvasWdg(BaseRefreshWdg):
 
 
         # create the paint where all the connectors are drawn
-        paint = my.get_paint()
+        paint = self.get_paint()
 
         # add custom canvas behaviors on the canvas div instead
-        my.canvas_behaviors = my.get_canvas_behaviors()
-        for canvas_behavior in my.canvas_behaviors:
+        self.canvas_behaviors = self.get_canvas_behaviors()
+        for canvas_behavior in self.canvas_behaviors:
             canvas.add_behavior( canvas_behavior )
 
 
@@ -449,7 +455,7 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         } )
 
 
-        if my.kwargs.get("use_mouse_wheel") in [True, 'true']:
+        if self.kwargs.get("use_mouse_wheel") in [True, 'true']:
             paint.add_behavior( {
             "type": 'wheel',
             "cbjs_action": '''
@@ -482,19 +488,19 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         template_div.add_class("spt_pipeline_template")
         inner.add(template_div)
 
-        node = my.get_node("node", node_type="node")
+        node = self.get_node("node", node_type="node")
         node.add_style("left: 0px")
         node.add_style("top: 0px")
         template_div.add(node)
 
-        node = my.get_node("manual", node_type="manual")
+        node = self.get_node("manual", node_type="manual")
         node.add_style("left: 0px")
         node.add_style("top: 0px")
         template_div.add(node)
 
 
         # add an unknown type
-        node = my.get_node("unknown", node_type="unknown")
+        node = self.get_node("unknown", node_type="unknown")
         node.add_style("left: 0px")
         node.add_style("top: 0px")
         template_div.add(node)
@@ -502,39 +508,39 @@ class PipelineCanvasWdg(BaseRefreshWdg):
 
 
         # add folder group node
-        folder = my.get_folder("folder")
+        folder = self.get_folder("folder")
         template_div.add(folder)
 
         # add approval node
-        approval = my.get_approval_node("approval")
+        approval = self.get_approval_node("approval")
         template_div.add(approval)
 
-        approval = my.get_condition_node("condition")
+        approval = self.get_condition_node("condition")
         template_div.add(approval)
 
-        action = my.get_node("action", node_type="action")
+        action = self.get_node("action", node_type="action")
         template_div.add(action)
 
-        heirarchy = my.get_node("heirarcy", node_type="hierarchy")
+        heirarchy = self.get_node("heirarcy", node_type="hierarchy")
         template_div.add(heirarchy)
 
-        dependency = my.get_node("dependency", node_type="dependency")
+        dependency = self.get_node("dependency", node_type="dependency")
         template_div.add(dependency)
 
 
-        progress = my.get_node("progress", node_type="progress")
+        progress = self.get_node("progress", node_type="progress")
         template_div.add(progress)
 
 
-        endpoint = my.get_endpoint_node("output", node_type="output")
+        endpoint = self.get_endpoint_node("output", node_type="output")
         template_div.add(endpoint)
 
-        endpoint = my.get_endpoint_node("input", node_type="input")
+        endpoint = self.get_endpoint_node("input", node_type="input")
         template_div.add(endpoint)
 
 
         # add trigger node
-        trigger = my.get_trigger_node()
+        trigger = self.get_trigger_node()
         template_div.add(trigger)
 
 
@@ -543,12 +549,12 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         configs = search.get_sobjects()
         for config in configs:
             node_type = config.get_value("view")
-            template = my.get_custom_node(node_type, node_type=node_type)
+            template = self.get_custom_node(node_type, node_type=node_type)
             template_div.add(template)
 
 
         # resize test
-        show_resize = my.kwargs.get("show_resize")
+        show_resize = self.kwargs.get("show_resize")
         if show_resize in ['true', True]:
             resize_wdg = DivWdg()
             resize_wdg.add("Resize")
@@ -562,7 +568,7 @@ class PipelineCanvasWdg(BaseRefreshWdg):
 
 
 
-        pipeline_str = my.kwargs.get("pipeline")
+        pipeline_str = self.kwargs.get("pipeline")
         div = DivWdg()
         outer.add(div)
 
@@ -580,7 +586,7 @@ class PipelineCanvasWdg(BaseRefreshWdg):
             } )
 
 
-        scale = my.kwargs.get("scale")
+        scale = self.kwargs.get("scale")
         if scale:
             scale = float(scale)
             div.add_behavior( {
@@ -597,8 +603,8 @@ class PipelineCanvasWdg(BaseRefreshWdg):
 
         div.add_behavior( {
         'type': 'load',
-        'line_mode': my.line_mode,
-        'has_prefix': my.has_prefix,
+        'line_mode': self.line_mode,
+        'has_prefix': self.has_prefix,
         'cbjs_action': '''
             spt.pipeline.init(bvr);
             spt.pipeline.set_line_mode(bvr.line_mode);
@@ -611,16 +617,16 @@ class PipelineCanvasWdg(BaseRefreshWdg):
 
 
 
-    def get_paint(my):
+    def get_paint(self):
         from pyasm.web import Canvas
         canvas = Canvas()
         canvas.add_class("spt_pipeline_paint")
         #canvas.add_style("float: left")
         canvas.add_style("position: relative")
 
-        canvas.add_style("margin-top: -%s" % my.height)
-        canvas.set_attr("width", my.width)
-        canvas.set_attr("height", my.height)
+        canvas.add_style("margin-top: -%s" % self.height)
+        canvas.set_attr("width", self.width)
+        canvas.set_attr("height", self.height)
 
         canvas.add_style("z-index: 1")
 
@@ -640,11 +646,11 @@ class PipelineCanvasWdg(BaseRefreshWdg):
 
 
 
-    def get_canvas_behaviors(my):
+    def get_canvas_behaviors(self):
         return []
 
 
-    def get_folder(my, group_name):
+    def get_folder(self, group_name):
         div = DivWdg()
         div.add_class("spt_pipeline_folder")
         div.add_border()
@@ -736,11 +742,11 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         return div
 
 
-    def get_node(my, name, node_type="node"):
+    def get_node(self, name, node_type="node"):
 
         node = DivWdg()
 
-        width, height = my.get_node_size()
+        width, height = self.get_node_size()
 
 
         if node_type == "action":
@@ -748,7 +754,7 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         elif node_type == "hierarchy":
             border_radius =  50 
             width = width
-            height = height + 50
+            height = height + 40
         elif node_type == "dependency":
             border_radius =  5
             #width = width
@@ -796,122 +802,7 @@ class PipelineCanvasWdg(BaseRefreshWdg):
 
 
         offset = 0
-        my.add_nobs(node, width, height, offset)
-
-        """
-        # add nobbies on the node
-        left_nob = DivWdg()
-        left_nob.add_class("spt_left_nob")
-        left_nob.set_round_corners(3, corners=['TL','BL'])
-        left_nob.add_event("onmouseover", "$(this).setStyle('background','rgba(255,255,0,0.7')")
-        left_nob.add_event("onmouseout", "$(this).setStyle('background','rgba(255,255,0,0.2')")
-        left_nob.add_style("cursor: pointer")
-        left_nob.add_style("position: absolute")
-        left_nob.add_style("border: solid 1px black")
-        left_nob.add_style("background: rgba(255,255,0,0.2)")
-        left_nob.add_style("width: 10px")
-        left_nob.add_style("height: 10px")
-        left_nob.add_style("top: %spx" % (height/2-5))
-        left_nob.add_style("left: -11px")
-        left_nob.add_style("z-index: 100")
-        left_nob.add("")
-        node.add(left_nob)
-        
-            
-
-        # add nobbies on the node
-        right_nob = DivWdg()
-        node.add(right_nob)
-        right_nob.add_class("spt_right_nob")
-        right_nob.add_style("cursor: pointer")
-        right_nob.add_style("position: absolute")
-        right_nob.add_style("top: 0px")
-        right_nob.add_style("left: %spx" % (width+1))
-        right_nob.add_style("z-index: 100")
-        right_nob.add_style("width: 12px")
-        right_nob.add_style("height: 40px")
-
-        right_nob_vis = DivWdg()
-        right_nob.add(right_nob_vis)
-        right_nob_vis.add("")
-        right_nob_vis.set_round_corners(3, corners=['TR','BR'])
-        right_nob_vis.add_style("border: solid 1px black")
-        right_nob_vis.add_style("background: rgba(255,255,0,0.2)")
-        right_nob_vis.add_style("width: 10px")
-        right_nob_vis.add_style("height: 10px")
-        right_nob_vis.add_style("margin-top: %spx" % (height/2-5))
-        right_nob_vis.add_event("onmouseover", "$(this).setStyle('background','rgba(255,255,0,0.7')")
-        right_nob_vis.add_event("onmouseout", "$(this).setStyle('background','rgba(255,255,0,0.2')")
-
-        if my.nob_mode == 'dynamic':
-            left_nob.add_style("display: none")
-            right_nob.add_style("display: none")
-            node.add_behavior( {
-            'type': 'hover',
-            'cbjs_action_over': '''
-            var el = bvr.src_el;
-            var nob = el.getElement(".spt_left_nob");
-            spt.show(nob);
-            var nob = el.getElement(".spt_right_nob");
-            spt.show(nob);
-            ''',
-            'cbjs_action_out': '''
-            var el = bvr.src_el;
-            var nob = el.getElement(".spt_left_nob");
-            spt.hide(nob);
-            var nob = el.getElement(".spt_right_nob");
-            spt.hide(nob);
-
-            '''
-            } )
-
-        
-        if my.is_editable:
-
-            # add the behavior that will draw the connector
-            left_nob.add_behavior( {
-            "type": 'drag',
-            "mouse_btn": 'LMB',
-            "drag_el": '@',
-            "cb_set_prefix": 'spt.pipeline.drag_connector'
-            } )
-            
-            
-
-            right_nob.add_behavior( {
-            "type": 'drag',
-            "mouse_btn": 'LMB',
-            "drag_el": '@',
-            "cb_set_prefix": 'spt.pipeline.drag_connector'
-            } )
-            right_nob.add_behavior( {
-            "type": 'drag',
-            "modkeys": 'SHIFT',
-            "mouse_btn": 'LMB',
-            "drag_el": '@',
-            "cb_set_prefix": 'spt.pipeline.drag_connector'
-            } )
-
-
-        """
-
-
-        # active glow
-        """
-        BASE = "/context/themes2/default/pipeline"
-        active = DivWdg()
-        node.add(active)
-        active.add_class("spt_active");
-        active.add("<img src='%s/node_glow.png' height='%s' width='125'/>" % (BASE, (height+20)))
-        active.add_style("position: absolute")
-        active.add_style("top: -9px")
-        active.add_style("left: -11px")
-        active.add_style("z-index: -200")
-        active.add_style("display: none")
-
-        active.add_style("box-shadow: 0px 0px 10px rgba(0,0,0,0.5)")
-        """
-
+        self.add_nobs(node, width, height, offset)
 
 
         content = DivWdg()
@@ -931,7 +822,7 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         if border_radius:
             content.set_round_corners(border_radius)
 
-        extra_wdg = my.get_extra_node_content_wdg()
+        extra_wdg = self.get_extra_node_content_wdg()
         if extra_wdg:
             content.add(extra_wdg)
 
@@ -980,7 +871,7 @@ class PipelineCanvasWdg(BaseRefreshWdg):
             icon = IconButtonWdg(name="Expand", icon="BS_ARROW_DOWN")
             icon_div.add(icon)
             icon_div.add_style("margin: 0px auto")
-            icon_div.add_style("top: 50px")
+            icon_div.add_style("top: 40px")
             icon_div.add_style("left: %spx" % (width/2-12))
             icon_div.add_style("position: absolute")
             icon_div.add_style("z-index: 300")
@@ -996,6 +887,9 @@ class PipelineCanvasWdg(BaseRefreshWdg):
             var node = bvr.src_el.getParent(".spt_pipeline_node");
             var node_name = spt.pipeline.get_node_name(node);
             var pipeline_code = spt.pipeline.get_current_group();
+            var pipeline = server.eval("@SOBJECT(sthpw/pipeline['code','"+pipeline_code+"'])", {single: true});
+            var search_type = pipeline.search_type;
+
 
             var expr = "@SOBJECT(config/process['pipeline_code','"+pipeline_code+"']['process','"+node_name+"'])";
             var process = server.eval(expr, {single: true});
@@ -1010,25 +904,53 @@ class PipelineCanvasWdg(BaseRefreshWdg):
                 var subpipeline = server.eval("@SOBJECT(sthpw/pipeline['parent_process','"+process_code+"'])", {single: true});
             }
 
-            if (!subpipeline) {
-                // create the pipeline
-                var data = {
-                    name: node_name + "_pipeline",
-                    parent_process: process_code
-                }
-                subpipeline = server.insert("sthpw/pipeline", data);
-            }
-
-            var subpipeline_code = subpipeline.code;
-
-            spt.pipeline.clear_canvas();
-            spt.pipeline.import_pipeline(subpipeline_code);
-
             var top = spt.pipeline.top;
             var text = top.getElement(".spt_pipeline_editor_current2");
+
             if (text) {
-                var html = "<span class='hand spt_pipeline_link' spt_pipeline_code='"+subpipeline.code+"'>"+subpipeline.name+"</span>";
-                text.innerHTML = text.innerHTML + " / " + html;
+                var root_html = text.innerHTML; 
+                bvr.breadcrumb = root_html;
+            }
+            else {
+                var root_html = "";
+            }
+
+
+            if (!subpipeline) {
+                spt.confirm( "Create new workflow?", function() {
+                    // create the pipeline
+                    var data = {
+                        name: node_name + " Workflow",
+                        search_type: search_type,
+                        // This is deprecated, use subpipeline_code on process
+                        //parent_process: process_code
+                    }
+                    subpipeline = server.insert("sthpw/pipeline", data);
+                    subpipeline_code = subpipeline.code;
+                    server.update(process, { subpipeline_code: subpipeline_code })
+
+                    spt.pipeline.clear_canvas();
+                    spt.pipeline.import_pipeline(subpipeline_code);
+
+                    if (text) {
+                        var html = "<span class='hand tactic_hover spt_pipeline_link' spt_pipeline_code='"+subpipeline.code+"'>"+subpipeline.name+"</span>";
+                        text.innerHTML = root_html + " / " + html;
+                    }
+
+                } );
+                return;
+            }
+            else {
+                subpipeline_code = subpipeline.code;
+
+                spt.pipeline.clear_canvas();
+                spt.pipeline.import_pipeline(subpipeline_code);
+
+                if (text) {
+                    var html = "<span class='hand tactic_hover spt_pipeline_link' spt_pipeline_code='"+subpipeline.code+"'>"+subpipeline.name+"</span>";
+                    text.innerHTML = root_html + " / " + html;
+                }
+
             }
 
             evt.stopPropagation();
@@ -1039,19 +961,19 @@ class PipelineCanvasWdg(BaseRefreshWdg):
 
 
         # add custom node behaviors
-        node_behaviors = my.get_node_behaviors()
+        node_behaviors = self.get_node_behaviors()
         for node_behavior in node_behaviors:
             node.add_behavior( node_behavior )
 
 
 
-        my.add_default_node_behaviors(node, text)
+        self.add_default_node_behaviors(node, text)
 
         return node
 
 
 
-    def add_nobs(my, node, width, height, offset=0):
+    def add_nobs(self, node, width, height, offset=0):
 
         #mode = "vertical"
         mode = "horizontal"
@@ -1106,7 +1028,7 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         right_nob_vis.add_event("onmouseover", "$(this).setStyle('background','rgba(255,255,0,0.7')")
         right_nob_vis.add_event("onmouseout", "$(this).setStyle('background','rgba(255,255,0,0.2')")
 
-        if my.nob_mode == 'dynamic':
+        if self.nob_mode == 'dynamic':
             left_nob.add_style("display: none")
             right_nob.add_style("display: none")
             node.add_behavior( {
@@ -1132,7 +1054,7 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         right_nob.add_style("display", "none")
        
 
-        if my.is_editable:
+        if self.is_editable:
 
             # add the behavior that will draw the connector
             left_nob.add_behavior( {
@@ -1188,9 +1110,9 @@ class PipelineCanvasWdg(BaseRefreshWdg):
 
 
 
-    def add_default_node_behaviors(my, node, text):
+    def add_default_node_behaviors(self, node, text):
 
-        if not my.is_editable:
+        if not self.is_editable:
             return
 
 
@@ -1239,7 +1161,7 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         # When the text is blur, it will accept the value entered
         text.add_behavior( {
         'type': 'change',
-        'filter_node_name': my.filter_node_name,
+        'filter_node_name': self.filter_node_name,
         'cbjs_action': '''
         bvr.src_el.blur();
         '''
@@ -1247,7 +1169,7 @@ class PipelineCanvasWdg(BaseRefreshWdg):
 
         text.add_behavior( {
         'type': 'blur',
-        'filter_node_name': my.filter_node_name,
+        'filter_node_name': self.filter_node_name,
         'cbjs_action': '''
         bvr.src_el.setStyle("display", "none");
 
@@ -1276,7 +1198,7 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         # on normal click, select single node if not selected, otherwise
         # select the whole group
         node.add_behavior( {
-        'type': 'click_up',
+        'type': 'click',
         'cbjs_action': '''
         spt.pipeline.init(bvr);
         var node = bvr.src_el;
@@ -1287,6 +1209,7 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         else {
             spt.pipeline.select_single_node(node);
         }
+        evt.stopPropagation();
         '''
         } )
 
@@ -1329,12 +1252,12 @@ class PipelineCanvasWdg(BaseRefreshWdg):
 
 
 
-    def get_node_size(my):
+    def get_node_size(self):
         width = 100
         height = 40 
         return width, height
 
-    def get_extra_node_content_wdg(my):
+    def get_extra_node_content_wdg(self):
         return Widget()
 
         #icon = IconWdg("Expand", IconWdg.PIPELINE)
@@ -1344,7 +1267,7 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         #return icon
 
 
-    def get_endpoint_node(my, name, node_type ):
+    def get_endpoint_node(self, name, node_type ):
 
         node = DivWdg()
         node.add_class("spt_pipeline_%s" % node_type)
@@ -1366,7 +1289,7 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         height = 20
 
 
-        my.add_nobs(node, width, height)
+        self.add_nobs(node, width, height)
 
 
         content = DivWdg()
@@ -1413,14 +1336,14 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         node.add(active)
         active.add_class("spt_active")
 
-        my.add_default_node_behaviors(node, text)
+        self.add_default_node_behaviors(node, text)
 
         return node
 
 
 
 
-    def get_custom_node(my, name, node_type ):
+    def get_custom_node(self, name, node_type ):
 
         node = DivWdg()
 
@@ -1435,7 +1358,6 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         custom_wdg = CustomProcessConfig.get_node_handler(node_type)
         node.add(custom_wdg)
 
-
         node.add_attr("spt_element_name", name)
         node.add_attr("title", name)
 
@@ -1449,7 +1371,7 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         SmartMenu.assign_as_local_activator( node, 'SIMPLE_NODE_CTX')
 
  
-        node_behaviors = my.get_node_behaviors()
+        node_behaviors = self.get_node_behaviors()
         for node_behavior in node_behaviors:
             node.add_behavior( node_behavior )
 
@@ -1463,7 +1385,7 @@ class PipelineCanvasWdg(BaseRefreshWdg):
 
 
         nobs_offset = 0
-        my.add_nobs(node, width, height, nobs_offset)
+        self.add_nobs(node, width, height, nobs_offset)
 
 
         #content = DivWdg()
@@ -1475,7 +1397,6 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         #content.add_style("border-radius: %spx" % (width/2))
         #content.add_style("border: solid 1px black")
         #content.add( custom_node_wdg )
-
 
 
 
@@ -1504,12 +1425,16 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         text.add_style("width: 65px")
         text.set_value(name)
 
+        self.add_default_node_behaviors(node, text)
+
+        if custom_wdg.show_default_name() in ['false', False]:
+            label.add_style("display: none")
+
 
         active = DivWdg()
         node.add(active)
         active.add_class("spt_active")
 
-        my.add_default_node_behaviors(node, text)
 
         return node
 
@@ -1520,7 +1445,7 @@ class PipelineCanvasWdg(BaseRefreshWdg):
 
 
 
-    def get_condition_node(my, name, process=None):
+    def get_condition_node(self, name, process=None):
 
         node = DivWdg()
         node.add_class("spt_pipeline_condition")
@@ -1548,14 +1473,14 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         SmartMenu.assign_as_local_activator( node, 'SIMPLE_NODE_CTX')
 
         # add custom node behaviors
-        node_behaviors = my.get_node_behaviors()
+        node_behaviors = self.get_node_behaviors()
         for node_behavior in node_behaviors:
             node.add_behavior( node_behavior )
 
 
         offset = width * 0.12 # size to corner of square
 
-        my.add_nobs(node, width, height, 5)
+        self.add_nobs(node, width, height, 5)
 
 
         content = DivWdg()
@@ -1597,7 +1522,7 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         node.add(active)
         active.add_class("spt_active")
 
-        my.add_default_node_behaviors(node, text)
+        self.add_default_node_behaviors(node, text)
 
         return node
 
@@ -1605,7 +1530,7 @@ class PipelineCanvasWdg(BaseRefreshWdg):
 
 
 
-    def get_approval_node(my, name, process=None):
+    def get_approval_node(self, name, process=None):
 
         node = DivWdg()
         node.add_class("spt_pipeline_approval")
@@ -1634,14 +1559,14 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         SmartMenu.assign_as_local_activator( node, 'SIMPLE_NODE_CTX')
  
         # add custom node behaviors
-        node_behaviors = my.get_node_behaviors()
+        node_behaviors = self.get_node_behaviors()
         for node_behavior in node_behaviors:
             node.add_behavior( node_behavior )
 
 
 
 
-        my.add_nobs(node, width, height)
+        self.add_nobs(node, width, height)
 
 
         content = DivWdg()
@@ -1686,13 +1611,13 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         node.add(active)
         active.add_class("spt_active")
 
-        my.add_default_node_behaviors(node, text)
+        self.add_default_node_behaviors(node, text)
 
         return node
 
 
 
-    def get_trigger_node(my):
+    def get_trigger_node(self):
 
 
         name = "trigger_template"
@@ -1718,7 +1643,7 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         node.add_style("height: auto")
 
 
-        #my.add_nobs(node, width, height)
+        #self.add_nobs(node, width, height)
 
         content = DivWdg()
         node.add(content)
@@ -1797,7 +1722,7 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         } )
 
 
-        my.add_default_node_behaviors(node, text)
+        self.add_default_node_behaviors(node, text)
 
         return node
 
@@ -1808,7 +1733,7 @@ class PipelineCanvasWdg(BaseRefreshWdg):
 
 
 
-    def get_connector(my, name, start, end):
+    def get_connector(self, name, start, end):
         # add a connector
         connector = DivWdg()
         connector.add_style("position: relative")
@@ -1835,13 +1760,13 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         return connector
 
 
-    def get_canvas_behavior(my):
+    def get_canvas_behavior(self):
         return []
 
-    def get_node_behaviors(my):
+    def get_node_behaviors(self):
         return []
 
-    def get_node_context_menu(my):
+    def get_node_context_menu(self):
 
         menu = Menu(width=180)
         menu.set_allow_icons(False)
@@ -1919,7 +1844,7 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         return menu
 
 
-    def get_simple_node_context_menu(my):
+    def get_simple_node_context_menu(self):
 
         menu = Menu(width=180)
         menu.set_allow_icons(False)
@@ -1951,7 +1876,7 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         return menu 
     
 
-    def get_onload_js(my):
+    def get_onload_js(self):
 
         return r'''
 
@@ -2759,8 +2684,12 @@ spt.pipeline.add_node = function(name, x, y, kwargs) {
 
     var label = new_node.getElement(".spt_label");
     var input = new_node.getElement(".spt_input");
-    label.innerHTML = label_str;
-    input.value = label_str;
+    if (label) {
+        label.innerHTML = label_str;
+    }
+    if (input) {
+        input.value = label_str;
+    }
     new_node.setAttribute("spt_element_name", name);
     new_node.spt_name = name;
     new_node.setAttribute("title", name);

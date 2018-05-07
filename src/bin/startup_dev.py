@@ -9,9 +9,10 @@
 #
 #
 #
+from __future__ import print_function
+
 
 import os, sys
-
 
 # set up environment
 os.environ['TACTIC_APP_SERVER'] = "cherrypy"
@@ -28,7 +29,7 @@ tactic_site_dir = tacticenv.get_site_dir()
 sys.path.insert(0, "%s/src" % tactic_install_dir)
 sys.path.insert(0, "%s/tactic_sites" % tactic_install_dir)
 sys.path.insert(0, tactic_site_dir)
-sys.path.insert(0, "%s/3rd_party/CherryPy" % tactic_install_dir)
+
 
 
 def startup(port, server=""):
@@ -67,7 +68,12 @@ def startup(port, server=""):
         sys.exit(0)
 
     import cherrypy
-    if cherrypy.__version__.startswith("3."):
+    try:
+        cherrypy_major_version = int(cherrypy.__version__.split('.')[0])
+    except:
+        cherypy_major_version = 3
+
+    if cherrypy_major_version >= 3:
         from pyasm.web.cherrypy30_startup import CherryPyStartup
         startup = CherryPyStartup(port)
 

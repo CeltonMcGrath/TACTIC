@@ -22,6 +22,7 @@ from pyasm.command import Command
 from pyasm.web import DivWdg, WebContainer, Table, SpanWdg, HtmlElement
 from pyasm.search import Search, SearchType, SearchKey, SObject
 from tactic.ui.panel import FastTableLayoutWdg
+from pyasm.widget import SwapDisplayWdg
 
 from pyasm.widget import ProdIconButtonWdg, IconWdg, TextWdg, CheckboxWdg, HiddenWdg, SelectWdg, TextAreaWdg
 
@@ -35,35 +36,78 @@ class PipelineToolWdg(BaseRefreshWdg):
     '''This is the entire tool, including the sidebar and tabs, used to
     edit the various pipelines that exists'''
 
-    def init(my):
+    def init(self):
         # to display pipelines of a certain search_type on load
-        my.search_type = my.kwargs.get('search_type')
-        my.search_key = my.kwargs.get('search_key')
+        self.search_type = self.kwargs.get('search_type')
+        self.search_key = self.kwargs.get('search_key')
 
-    def get_display(my):
+    def get_display(self):
 
-        top = my.top
-        my.set_as_panel(top)
+        top = self.top
+        self.set_as_panel(top)
         top.add_class("spt_pipeline_tool_top")
         #top.add_style("margin-top: 10px")
 
         inner = DivWdg()
         top.add(inner)
 
+        show_pipelines = self.kwargs.get("show_pipeline_list")
+
         #table = Table()
         table = ResizableTableWdg()
+        inner.add(table)
         table.add_style("width: 100%")
-
         table.add_color("background", "background")
         table.add_color("color", "color")
-        inner.add(table)
+
+
+
+        table.add_row()
+        if show_pipelines not in [False, 'false']:
+            left = table.add_cell()
+        right = table.add_cell()
+        info = table.add_cell()
+
+
+        """
+        container = DivWdg()
+        inner.add(container)
+        container.add_style("display: flex")
+        container.add_style("flex-direction: row")
+        container.add_style("flex-wrap: nowrap")
+        container.add_style("justify-content: center")
+        container.add_style("align-items: stretch")
+        container.add_style("width: 100%")
+        container.add_style("height: 100%")
+
+        if show_pipelines not in [False, 'false']:
+            left = DivWdg()
+            container.add(left)
+            left.add_style("overflow-y: auto")
+            left.add_style("overflow-x: hidden")
+
+        right = DivWdg()
+        right.add_style("flex-grow: 2")
+
+        container.add(right)
+        info = DivWdg()
+        container.add(info)
+
+
+        container.add_style("width: 100%")
+        container.add_color("background", "background")
+        """
+
+
+
+
 
         # create two events
         save_event = top.get_unique_event()
         #save_new_event = '%s_new' % save_event
         save_new_event = save_event
 
-        pipeline_code = my.kwargs.get("pipeline")
+        pipeline_code = self.kwargs.get("pipeline")
 
 
         if pipeline_code:
@@ -152,33 +196,28 @@ class PipelineToolWdg(BaseRefreshWdg):
         } )
 
 
-        my.settings = my.kwargs.get('settings') or []
-        if my.settings and isinstance(my.settings, basestring):
-            my.settings = my.settings.split("|")
+        self.settings = self.kwargs.get('settings') or []
+        if self.settings and isinstance(self.settings, basestring):
+            self.settings = self.settings.split("|")
 
 
 
-        table.add_row()
 
-        show_pipelines = my.kwargs.get("show_pipeline_list")
         if show_pipelines not in [False, 'false']:
-            left = table.add_cell()
             left.add_style("width: 200px")
             left.add_style("min-width: 100px")
             left.add_style("vertical-align: top")
 
-            expression = my.kwargs.get("expression")
+            expression = self.kwargs.get("expression")
 
-            pipeline_list = PipelineListWdg(save_event=save_event, save_new_event=save_new_event, settings=my.settings, expression=expression )
+            pipeline_list = PipelineListWdg(save_event=save_event, save_new_event=save_new_event, settings=self.settings, expression=expression )
             left.add(pipeline_list)
 
 
-        right = table.add_cell()
-        #right.add_style("width: 500px")
 
-        show_help = my.kwargs.get('show_help') or True
-
-        pipeline_wdg = PipelineEditorWdg(height=my.kwargs.get('height'), width=my.kwargs.get('width'), save_new_event=save_new_event, show_help=show_help, show_gear=my.kwargs.get('show_gear'))
+        show_help = self.kwargs.get('show_help') or True
+        width = self.kwargs.get("width")
+        pipeline_wdg = PipelineEditorWdg(height=self.kwargs.get('height'), width=width, save_new_event=save_new_event, show_help=show_help, show_gear=self.kwargs.get('show_gear'))
         right.add(pipeline_wdg)
         pipeline_wdg.add_style("position: relative")
         pipeline_wdg.add_style("z-index: 0")
@@ -217,7 +256,7 @@ class PipelineToolWdg(BaseRefreshWdg):
         # NOTE: the canvas in PipelineCanvasWdg requires a set size ... it does not respond
         # well to sizes like 100% or auto.  Unless this is fixed, we cannot have a table
         # responsively respond to a changing window size.
-        info = table.add_cell()
+
         #info.add_style("display: none")
         info.add_class("spt_pipeline_tool_info")
         info.add_class("spt_panel") 
@@ -232,7 +271,7 @@ class PipelineToolWdg(BaseRefreshWdg):
         info_wdg.add_style("height: 100%")
         info_wdg.add_class("spt_resizable")
 
-        show_info_tab = my.kwargs.get("show_info_tab")
+        show_info_tab = self.kwargs.get("show_info_tab")
         show_info_tab = True
         if show_info_tab in ['false', False]:
             show_info_tab = False
@@ -241,7 +280,7 @@ class PipelineToolWdg(BaseRefreshWdg):
 
 
 
-        if my.kwargs.get("is_refresh"):
+        if self.kwargs.get("is_refresh"):
             return inner
         else:
             return top
@@ -252,9 +291,9 @@ class PipelineToolWdg(BaseRefreshWdg):
 class PipelineTabWdg(BaseRefreshWdg):
 
 
-    def get_display(my):
-        my.search_type = my.kwargs.get('search_type')
-        my.search_key = my.kwargs.get('search_key')
+    def get_display(self):
+        self.search_type = self.kwargs.get('search_type')
+        self.search_key = self.kwargs.get('search_key')
 
         config_xml = '''
         <config>
@@ -270,11 +309,11 @@ class PipelineTabWdg(BaseRefreshWdg):
         </tab>
         </config>
         '''
-        tab = TabWdg(config_xml=config_xml, extra_menu=my.get_extra_tab_menu())
+        tab = TabWdg(config_xml=config_xml, extra_menu=self.get_extra_tab_menu())
 
 
         # add onload action at the very end
-        if my.search_type:
+        if self.search_type:
             load_cbjs_action = '''
             var server = TacticServerStub.get();
             var pipeline_codes = server.eval("@GET(sthpw/pipeline['search_type','%s'].code)");
@@ -284,21 +323,21 @@ class PipelineTabWdg(BaseRefreshWdg):
             for (var k=0; k<pipeline_codes.length; k++)
                 spt.named_events.fire_event('pipeline_' + pipeline_codes[k] + '|click', bvr);
 
-            '''%( my.search_type)
+            '''%( self.search_type)
 
 
             tab.add_behavior({
                       'type':'load',
                       'cbjs_action':  load_cbjs_action})
 
-        elif my.search_key:
+        elif self.search_key:
             load_cbjs_action = '''
             var server = TacticServerStub.get();
             var so = server.get_by_search_key('%s');
             if (so)
                 spt.named_events.fire_event('pipeline_' + so.code + '|click', bvr);
 
-            '''%( my.search_key)
+            '''%( self.search_key)
 
 
             tab.add_behavior({
@@ -311,7 +350,7 @@ class PipelineTabWdg(BaseRefreshWdg):
 
 
 
-    def get_extra_tab_menu(my):
+    def get_extra_tab_menu(self):
         menu = Menu(width=180)
 
         menu_item = MenuItem(type='title', label='Raw Data')
@@ -416,23 +455,23 @@ class PipelineTabWdg(BaseRefreshWdg):
 class PipelineListWdg(BaseRefreshWdg):
 
         
-    def init(my):
-        my.save_event = my.kwargs.get("save_event")
+    def init(self):
+        self.save_event = self.kwargs.get("save_event")
 
-        my.save_new_event = my.kwargs.get("save_new_event")
+        self.save_new_event = self.kwargs.get("save_new_event")
 
-        my.settings = my.kwargs.get("settings") or []
-        if my.settings and isinstance(my.settings, basestring):
-            my.settings = my.settings.split("|")
+        self.settings = self.kwargs.get("settings") or []
+        if self.settings and isinstance(self.settings, basestring):
+            self.settings = self.settings.split("|")
 
 
-    def get_display(my):
+    def get_display(self):
 
-        top = my.top
+        top = self.top
         top.add_class("spt_pipeline_list")
-        my.set_as_panel(top)
+        self.set_as_panel(top)
         top.add_style("position: relative")
-        top.add_style("padding: 0px 10px")
+        top.add_style("padding: 0px 0px")
 
         title_div = DivWdg()
 
@@ -444,7 +483,7 @@ class PipelineListWdg(BaseRefreshWdg):
 
         button.add_behavior( {
         'type': 'click_up',
-        'save_event': my.save_new_event,
+        'save_event': self.save_new_event,
         'cbjs_action': '''
         var class_name = 'tactic.ui.panel.EditWdg';
         var kwargs = {
@@ -478,6 +517,7 @@ class PipelineListWdg(BaseRefreshWdg):
         pipelines_div = DivWdg()
         top.add(pipelines_div)
         pipelines_div.add_class("spt_resizable")
+
         pipelines_div.add_style("overflow-x: hidden")
         pipelines_div.add_style("min-height: 290px")
         pipelines_div.add_style("min-width: 100px")
@@ -485,15 +525,19 @@ class PipelineListWdg(BaseRefreshWdg):
         pipelines_div.add_style("height: auto")
 
         inner = DivWdg()
+        pipelines_div.add(inner)
         inner.add_class("spt_pipeline_list_top")
-        inner.add_style("width: 300px")
+
+        inner.add_style("display: flex")
+        inner.add_style("flex-direction: column")
+
+        inner.add_style("width: 100%")
         inner.add_style("height: auto")
         inner.add_style("max-height: 500px")
-        pipelines_div.add(inner)
 
 
         # add in a context menu
-        menu = my.get_pipeline_context_menu()
+        menu = self.get_pipeline_context_menu()
         menus = [menu.get_data()]
         menus_in = {
             'PIPELINE_CTX': menus,
@@ -506,7 +550,7 @@ class PipelineListWdg(BaseRefreshWdg):
 
 
         # template pipeline
-        if "template" in my.settings:
+        if "template" in self.settings:
             search = Search("sthpw/pipeline")
             search.add_filter("project_code", project_code)
             search.add_filter("code", "%s/__TEMPLATE__" % project_code)
@@ -519,7 +563,7 @@ class PipelineListWdg(BaseRefreshWdg):
             pipeline.set_value("name", "Template Processes")
             pipeline.commit()
 
-            pipeline_div = my.get_pipeline_wdg(pipeline)
+            pipeline_div = self.get_pipeline_wdg(pipeline)
             inner.add(pipeline_div)
 
 
@@ -529,13 +573,12 @@ class PipelineListWdg(BaseRefreshWdg):
 
 
         # project_specific pipelines
-        from pyasm.widget import SwapDisplayWdg
         content_div = DivWdg()
         content_div.add_style('padding-top: 6px') 
         inner.add(content_div)
 
         try:
-            expression = my.kwargs.get("expression")
+            expression = self.kwargs.get("expression")
             if expression:
                 result = Search.eval(expression)
                 if isinstance(result, Search):
@@ -629,7 +672,7 @@ class PipelineListWdg(BaseRefreshWdg):
 
 
                 # build each pipeline menu item
-                pipeline_div = my.get_pipeline_wdg(pipeline)
+                pipeline_div = self.get_pipeline_wdg(pipeline)
                 stype_content_div.add(pipeline_div)
 
             if not pipelines:
@@ -638,7 +681,7 @@ class PipelineListWdg(BaseRefreshWdg):
                 content_div.add(no_items)
                 no_items.add("<i>-- No Items --</i>")
 
-        except Exception, e:
+        except Exception as  e:
             print("WARNING: ", e)
             none_wdg = DivWdg("<i>&nbsp;&nbsp;-- Error --</i>")
             none_wdg.add("<div>%s</div>" % str(e))
@@ -651,7 +694,7 @@ class PipelineListWdg(BaseRefreshWdg):
         inner.add("<br clear='all'/>")
 
         # task status pipelines
-        if not my.settings or "task" in my.settings:
+        if not self.settings or "task" in self.settings:
 
             search = Search("sthpw/pipeline")
             search.add_filter("project_code", project_code)
@@ -681,7 +724,7 @@ class PipelineListWdg(BaseRefreshWdg):
 
                 colors = {}
                 for pipeline in pipelines:
-                    pipeline_div = my.get_pipeline_wdg(pipeline)
+                    pipeline_div = self.get_pipeline_wdg(pipeline)
                     content_div.add(pipeline_div)
                     colors[pipeline.get_code()] = pipeline.get_value("color")
 
@@ -700,7 +743,7 @@ class PipelineListWdg(BaseRefreshWdg):
 
 
 
-        if not my.settings or "misc" in my.settings:
+        if not self.settings or "misc" in self.settings:
 
             search = Search("sthpw/pipeline")
             search.add_filter("project_code", project_code)
@@ -729,7 +772,7 @@ class PipelineListWdg(BaseRefreshWdg):
 
                 colors = {}
                 for pipeline in pipelines:
-                    pipeline_div = my.get_pipeline_wdg(pipeline)
+                    pipeline_div = self.get_pipeline_wdg(pipeline)
                     content_div.add(pipeline_div)
                     colors[pipeline.get_code()] = pipeline.get_value("color")
 
@@ -744,7 +787,7 @@ class PipelineListWdg(BaseRefreshWdg):
 
         show_site_wide_pipelines = True
 
-        if (not my.settings or "misc" in my.settings) and show_site_wide_pipelines:
+        if (not self.settings or "misc" in self.settings) and show_site_wide_pipelines:
             # site-wide  pipelines
             search = Search("sthpw/pipeline")
             search.add_filter("project_code", "NULL", op="is", quoted=False)
@@ -771,7 +814,7 @@ class PipelineListWdg(BaseRefreshWdg):
                 site_wide_div.add_class("spt_pipeline_list_site")
 
                 for pipeline in pipelines:
-                    pipeline_div = my.get_pipeline_wdg(pipeline)
+                    pipeline_div = self.get_pipeline_wdg(pipeline)
                     site_wide_div.add(pipeline_div)
                     colors[pipeline.get_code()] = pipeline.get_value("color")
 
@@ -784,13 +827,14 @@ class PipelineListWdg(BaseRefreshWdg):
             pipelines = search.get_sobjects()
 
             if pipelines:
+                inner.add("<br clear='all'/>")
 
                 # misc status pipelines
                 swap = SwapDisplayWdg()
                 inner.add(swap)
                 swap.add_style("float: left")
 
-                title = DivWdg("<b>Template Workflows</b> <i>(%s)</i>" % len(pipelines))
+                title = DivWdg("<b>Templates</b> <i>(%s)</i>" % len(pipelines))
                 title.add_style("padding-bottom: 2px")
                 title.add_style("padding-top: 3px")
                 inner.add(title)
@@ -801,7 +845,7 @@ class PipelineListWdg(BaseRefreshWdg):
 
                 colors = {}
                 for pipeline in pipelines:
-                    pipeline_div = my.get_pipeline_wdg(pipeline)
+                    pipeline_div = self.get_pipeline_wdg(pipeline)
                     content_div.add(pipeline_div)
                     colors[pipeline.get_code()] = pipeline.get_value("color")
 
@@ -817,7 +861,7 @@ class PipelineListWdg(BaseRefreshWdg):
 
 
 
-    def get_pipeline_wdg(my, pipeline):
+    def get_pipeline_wdg(self, pipeline):
         '''build each pipeline menu item'''
 
         pipeline_div = DivWdg()
@@ -869,7 +913,6 @@ class PipelineListWdg(BaseRefreshWdg):
         'title': title,
         'event_name': 'pipeline_%s|click' % pipeline_code,
         'cbjs_action': '''
-        //var src_el = bvr.firing_element;
         var top = null;
         // they could be different when inserting or just clicked on
         [bvr.firing_element, bvr.src_el].each(function(el) {
@@ -905,9 +948,17 @@ class PipelineListWdg(BaseRefreshWdg):
 
             
             var text = top.getElement(".spt_pipeline_editor_current2");
-            //text.value = title;
+
             var html = "<span class='hand spt_pipeline_link' spt_pipeline_code='"+bvr.pipeline_code+"'>"+bvr.title+"</span>";
-            text.innerHTML = html;
+
+
+            var breadcrumb = bvr.breadcrumb;
+            if (breadcrumb) {
+                text.innerHTML = breadcrumb + " / " + html;
+            }
+            else {
+                text.innerHTML = html;
+            }
 
             spt.pipeline.set_current_group(value);
 
@@ -994,7 +1045,7 @@ class PipelineListWdg(BaseRefreshWdg):
 
 
 
-    def get_pipeline_context_menu(my):
+    def get_pipeline_context_menu(self):
 
         menu = Menu(width=180)
         menu.set_allow_icons(False)
@@ -1007,7 +1058,7 @@ class PipelineListWdg(BaseRefreshWdg):
 
         menu_item = MenuItem(type='action', label='Edit Data')
         menu_item.add_behavior( {
-            'save_event': my.save_event,
+            'save_event': self.save_event,
             'cbjs_action': '''
             var activator = spt.smenu.get_activator(bvr);
             var code = activator.getAttribute("spt_pipeline");
@@ -1091,7 +1142,7 @@ class PipelineListWdg(BaseRefreshWdg):
 
 class PipelineToolCanvasWdg(PipelineCanvasWdg):
 
-    def get_node_behaviors(my):
+    def get_node_behaviors(self):
         behavior = {
         'type': 'click_up',
         'cbjs_action': '''
@@ -1126,7 +1177,7 @@ class PipelineToolCanvasWdg(PipelineCanvasWdg):
         return [behavior]
 
 
-    def get_canvas_behaviors(my):
+    def get_canvas_behaviors(self):
         behavior = {
         'type': 'click_up',
         'cbjs_action': '''
@@ -1209,9 +1260,9 @@ class PipelineToolCanvasWdg(PipelineCanvasWdg):
 
 
 
-    def get_node_context_menu(my):
+    def get_node_context_menu(self):
 
-        menu = super(PipelineToolCanvasWdg, my).get_node_context_menu()
+        menu = super(PipelineToolCanvasWdg, self).get_node_context_menu()
 
 
         project_code = Project.get_project_code()
@@ -1409,11 +1460,11 @@ class PipelineToolCanvasWdg(PipelineCanvasWdg):
 
 
 class PipelineInfoWdg(BaseRefreshWdg):
-    def get_display(my):
+    def get_display(self):
 
-        pipeline_code = my.kwargs.get("pipeline_code")
+        pipeline_code = self.kwargs.get("pipeline_code")
 
-        top = my.top
+        top = self.top
 
         if not pipeline_code:
             return top
@@ -1446,8 +1497,8 @@ class PipelineInfoWdg(BaseRefreshWdg):
         title_wdg.add("<hr/>")
 
 
-        top.add( my.get_description_wdg(pipeline) )
-        top.add( my.get_color_wdg(pipeline) )
+        top.add( self.get_description_wdg(pipeline) )
+        top.add( self.get_color_wdg(pipeline) )
 
 
         # sobject count
@@ -1503,7 +1554,7 @@ class PipelineInfoWdg(BaseRefreshWdg):
 
 
 
-    def get_description_wdg(my, pipeline):
+    def get_description_wdg(self, pipeline):
         description = pipeline.get_value("description")
         desc_div = DivWdg()
         desc_div.add_style("margin: 10px 10px 20px 10px")
@@ -1529,7 +1580,7 @@ class PipelineInfoWdg(BaseRefreshWdg):
 
 
 
-    def get_color_wdg(my, pipeline):
+    def get_color_wdg(self, pipeline):
         color = pipeline.get_value("color")
         div = DivWdg()
         div.add_style("margin: 5px 10px 20px 5px")
@@ -1569,9 +1620,9 @@ class PipelineInfoWdg(BaseRefreshWdg):
 
 class ConnectorInfoWdg(BaseRefreshWdg):
 
-    def get_display(my):
+    def get_display(self):
         
-        top = my.top
+        top = self.top
         top.add_class("spt_pipeline_connector_info")
 
         top.add_style("padding: 20px 0px")
@@ -1589,11 +1640,11 @@ class ConnectorInfoWdg(BaseRefreshWdg):
 
         top.add("<br/>")
         
-        pipeline_code = my.kwargs.get("pipeline_code")
+        pipeline_code = self.kwargs.get("pipeline_code")
         pipeline = Pipeline.get_by_code(pipeline_code)
 
-        from_node = my.kwargs.get("from_node")
-        to_node = my.kwargs.get("to_node")
+        from_node = self.kwargs.get("from_node")
+        to_node = self.kwargs.get("to_node")
         left_process = pipeline.get_process(from_node)
         right_process = pipeline.get_process(to_node)
         
@@ -1638,10 +1689,10 @@ class ConnectorInfoWdg(BaseRefreshWdg):
         td.add_style("padding: 5px")
 
 
-        left_selected = my.kwargs.get("from_attr")
+        left_selected = self.kwargs.get("from_attr")
         if not left_selected:
             left_selected = "output"
-        right_selected = my.kwargs.get("to_attr")
+        right_selected = self.kwargs.get("to_attr")
         if not right_selected:
             right_selected = "input"
 
@@ -1761,7 +1812,7 @@ class ConnectorInfoWdg(BaseRefreshWdg):
         top.add(save)
         save.add_behavior( {
             'type': 'click_up',
-            'kwargs': my.kwargs,
+            'kwargs': self.kwargs,
             'cbjs_action': '''
             var top = bvr.src_el.getParent(".spt_pipeline_info_top");
             var info_top = bvr.src_el.getParent(".spt_pipeline_connector_info");
@@ -1809,15 +1860,15 @@ class ConnectorInfoWdg(BaseRefreshWdg):
 
 class ProcessInfoWdg(BaseRefreshWdg):
 
-    def get_display(my):
+    def get_display(self):
 
-        node_type = my.kwargs.get("node_type")
+        node_type = self.kwargs.get("node_type")
 
-        top = my.top
+        top = self.top
         top.add_class(".spt_process_info_top")
-        my.set_as_panel(top)
+        self.set_as_panel(top)
 
-        pipeline_code = my.kwargs.get("pipeline_code")
+        pipeline_code = self.kwargs.get("pipeline_code")
         pipeline = Pipeline.get_by_code(pipeline_code)
         if not pipeline:
             return "N/A"
@@ -1830,46 +1881,46 @@ class ProcessInfoWdg(BaseRefreshWdg):
         widget = None
 
         if search_type == "sthpw/task":
-            widget = TaskStatusInfoWdg(**my.kwargs)
+            widget = TaskStatusInfoWdg(**self.kwargs)
 
         elif node_type in ['manual', 'node']:
-            widget = DefaultInfoWdg(**my.kwargs)
+            widget = DefaultInfoWdg(**self.kwargs)
 
         elif node_type == 'approval':
-            widget = ApprovalInfoWdg(**my.kwargs)
+            widget = ApprovalInfoWdg(**self.kwargs)
 
         elif node_type == 'action':
-            widget = ActionInfoWdg(**my.kwargs)
+            widget = ActionInfoWdg(**self.kwargs)
 
         elif node_type == 'condition':
-            widget = ConditionInfoWdg(**my.kwargs)
+            widget = ConditionInfoWdg(**self.kwargs)
 
         elif node_type == 'hierarchy':
-            widget = HierarchyInfoWdg(**my.kwargs)
+            widget = HierarchyInfoWdg(**self.kwargs)
 
         elif node_type == 'dependency':
-            widget = DependencyInfoWdg(**my.kwargs)
+            widget = DependencyInfoWdg(**self.kwargs)
 
         elif node_type == 'progress':
-            widget = ProgressInfoWdg(**my.kwargs)
+            widget = ProgressInfoWdg(**self.kwargs)
 
         elif node_type == 'unknown':
-            widget = UnknownInfoWdg(**my.kwargs)
+            widget = UnknownInfoWdg(**self.kwargs)
 
         elif node_type == 'progress':
-            widget = ProgressInfoWdg(**my.kwargs)
+            widget = ProgressInfoWdg(**self.kwargs)
 
         else:
             from pyasm.command import CustomProcessConfig
-            widget = CustomProcessConfig.get_info_handler(node_type, my.kwargs)
+            widget = CustomProcessConfig.get_info_handler(node_type, self.kwargs)
             #from spt.tools.youtube import YouTubeProcessInfoWdg
-            #widget = YouTubeProcessInfoWdg(**my.kwargs)
+            #widget = YouTubeProcessInfoWdg(**self.kwargs)
 
 
 
 
         if not widget:
-            widget = DefaultInfoWdg(**my.kwargs)
+            widget = DefaultInfoWdg(**self.kwargs)
 
         top.add(widget)
 
@@ -1880,7 +1931,7 @@ class ProcessInfoWdg(BaseRefreshWdg):
 
 class BaseInfoWdg(BaseRefreshWdg):
 
-    def get_description_wdg(my, process_sobj):
+    def get_description_wdg(self, process_sobj):
         if not process_sobj:
             description = "N/A"
         else:
@@ -1913,7 +1964,7 @@ class BaseInfoWdg(BaseRefreshWdg):
 
 
 
-    def get_input_output_wdg(my, pipeline, process):
+    def get_input_output_wdg(self, pipeline, process):
             
         div = DivWdg()
         div.add_style("margin: 10px")
@@ -1937,7 +1988,7 @@ class BaseInfoWdg(BaseRefreshWdg):
 
 
 
-    def get_title_wdg(my, process, node_type, show_node_type_select=True):
+    def get_title_wdg(self, process, node_type, show_node_type_select=True):
 
         div = DivWdg()
         div.add_style("margin-top: -25px")
@@ -2142,16 +2193,17 @@ class BaseInfoWdg(BaseRefreshWdg):
 
 
 
+
 class DefaultInfoWdg(BaseInfoWdg):
 
 
 
-    def get_display(my):
-        process = my.kwargs.get("process")
-        pipeline_code = my.kwargs.get("pipeline_code")
-        node_type = my.kwargs.get("node_type")
+    def get_display(self):
+        process = self.kwargs.get("process")
+        pipeline_code = self.kwargs.get("pipeline_code")
+        node_type = self.kwargs.get("node_type")
 
-        top = my.top
+        top = self.top
 
         if not pipeline_code:
             return top
@@ -2172,7 +2224,7 @@ class DefaultInfoWdg(BaseInfoWdg):
 
 
 
-        title_wdg = my.get_title_wdg(process, node_type)
+        title_wdg = self.get_title_wdg(process, node_type)
         top.add( title_wdg )
 
 
@@ -2198,7 +2250,7 @@ class DefaultInfoWdg(BaseInfoWdg):
         info_div.add_style("margin: 10px 10px 20px 10px")
 
 
-        desc_div = my.get_description_wdg(process_sobj)
+        desc_div = self.get_description_wdg(process_sobj)
         top.add(desc_div)
 
 
@@ -2217,6 +2269,7 @@ class DefaultInfoWdg(BaseInfoWdg):
             warning_div.add_style("font-size: 15px")
 
             return top
+
 
 
         has_tasks = True
@@ -2255,6 +2308,22 @@ class DefaultInfoWdg(BaseInfoWdg):
 
 
 
+        from pyasm.biz import ProjectSetting
+        setting = ProjectSetting.get_value_by_key("feature/process/task_detail")
+        if setting in ["true"]:
+
+            from spt.modules.workflow import TaskButtonDetailSettingWdg, TaskDetailSettingWdg
+            #detail_wdg = TaskDetailSettingWdg(
+            detail_wdg = TaskButtonDetailSettingWdg(
+                    **self.kwargs
+            )
+
+            #detail_wdg = self.get_detail_wdg()
+            top.add(detail_wdg)
+            detail_wdg.add_style("margin: 10px")
+
+
+
 
         process_code = process_sobj.get_value("code")
 
@@ -2288,15 +2357,22 @@ class DefaultInfoWdg(BaseInfoWdg):
 
         top.add("<br/><hr/>")
 
-        depend_div = DivWdg()
-        top.add(depend_div)
-        depend_div.add("<b>Process Dependencies</b><br/>")
-        depend_div.add("A list of dependencies related to this process.")
-        depend_div.add_style("margin: 20px 10px 10px 10px")
 
+        depend_title_div = DivWdg()
+        depend_div = DivWdg()
+        top.add(depend_title_div)
+        top.add(depend_div)
+
+        swap = SwapDisplayWdg()
+        depend_title_div.add(swap)
+        SwapDisplayWdg.create_swap_title(depend_title_div, swap, depend_div, is_open=False)
+
+        depend_title_div.add("<b>Process Dependencies</b><br/>")
+        depend_title_div.add("&nbsp;&nbsp;&nbsp;A list of items related to this process.")
+        depend_title_div.add_style("margin: 20px 10px 10px 10px")
 
         table = Table()
-        top.add(table)
+        depend_div.add(table)
         table.add_style('width: auto')
         table.add_style('margin: 0px 5px')
 
@@ -2413,8 +2489,8 @@ class DefaultInfoWdg(BaseInfoWdg):
 
 
 
-
-        has_checkins = True
+        # DEPRECATED: The old check-in widget is basically not functional anymore
+        has_checkins = False
         if has_checkins:
             div = DivWdg()
             top.add(div)
@@ -2455,19 +2531,19 @@ class DefaultInfoWdg(BaseInfoWdg):
 # DEPRECATED
 class ScriptEditWdg(BaseRefreshWdg):
     ''' Text area for Existing Script Edit '''
-    def get_display(my):
+    def get_display(self):
 
-        script = my.kwargs.get('script')
-        script_path = my.kwargs.get('script_path')
-        on_action_class = my.kwargs.get('on_action_class')
-        is_admin = my.kwargs.get('is_admin') in ['true', True]
+        script = self.kwargs.get('script')
+        script_path = self.kwargs.get('script_path')
+        on_action_class = self.kwargs.get('on_action_class')
+        is_admin = self.kwargs.get('is_admin') in ['true', True]
 
-        action = my.kwargs.get("action") or "script_path"
-        language = my.kwargs.get("language")
+        action = self.kwargs.get("action") or "script_path"
+        language = self.kwargs.get("language")
 
        
-        div = my.top
-        my.set_as_panel(div)
+        div = self.top
+        self.set_as_panel(div)
         div.add_class("spt_script_edit")
 
 
@@ -2730,7 +2806,7 @@ class ScriptEditWdg(BaseRefreshWdg):
 
         # expected script path should not match the existing script_path.
         # if they do, there is no point to show Create New
-        expected_script_path = my.kwargs.get('expected_script_path')
+        expected_script_path = self.kwargs.get('expected_script_path')
         
         if script_path and script_path != expected_script_path and show_script:
             create_new_button = ActionButtonWdg(title="Create New", tip="Create New Script", width=200)
@@ -2787,7 +2863,7 @@ class ScriptEditWdg(BaseRefreshWdg):
 """
 class ScriptCreateWdg(BaseRefreshWdg):
     ''' Blank Text area for New Script Creation '''
-    def get_display(my):
+    def get_display(self):
 
         script_path = ''
         div = DivWdg()
@@ -2816,14 +2892,14 @@ class ScriptCreateWdg(BaseRefreshWdg):
 
 class ScriptSettingsWdg(BaseRefreshWdg):
 
-    def get_display(my):
+    def get_display(self):
 
-        action = my.kwargs.get("action") or "create_new"
+        action = self.kwargs.get("action") or "create_new"
 
         is_admin = Environment.get_security().is_admin()
 
-        div = my.top
-        my.set_as_panel(div)
+        div = self.top
+        self.set_as_panel(div)
         div.add_class("spt_script_edit")
 
         if not action:
@@ -2832,17 +2908,17 @@ class ScriptSettingsWdg(BaseRefreshWdg):
 
 
         if action == "command":
-            on_action_class = my.kwargs.get("on_action_class")
-            script_wdg = my.get_command_script_wdg(on_action_class)
+            on_action_class = self.kwargs.get("on_action_class")
+            script_wdg = self.get_command_script_wdg(on_action_class)
 
         elif action == "create_new":
-            script_wdg = my.get_new_script_wdg(is_admin)
+            script_wdg = self.get_new_script_wdg(is_admin)
         else:
-            script_path = my.kwargs.get("script_path")
-            script = my.kwargs.get("script")
-            language = my.kwargs.get("language")
+            script_path = self.kwargs.get("script_path")
+            script = self.kwargs.get("script")
+            language = self.kwargs.get("language")
 
-            script_wdg = my.get_existing_script_wdg(script_path, script, language, is_admin)
+            script_wdg = self.get_existing_script_wdg(script_path, script, language, is_admin)
 
         div.add(script_wdg)
 
@@ -2857,7 +2933,7 @@ class ScriptSettingsWdg(BaseRefreshWdg):
         cmd_title.add_style('margin-bottom: 3px')
         div.add(cmd_title)
 
-        execute_mode = my.kwargs.get("execute_mode")
+        execute_mode = self.kwargs.get("execute_mode")
 
         cmd_text = SelectWdg(name="execute_mode")
         cmd_text.set_option("labels", "In Process|Blocking Separate Process|Non-Blocking Separate Process|Queued")
@@ -2874,7 +2950,7 @@ class ScriptSettingsWdg(BaseRefreshWdg):
 
 
 
-    def get_command_script_wdg(my, on_action_class):
+    def get_command_script_wdg(self, on_action_class):
         cmd_div = DivWdg()
         cmd_div.add_style('margin-bottom: 20px')
         cmd_div.add_style('margin-top: 20px')
@@ -2893,7 +2969,7 @@ class ScriptSettingsWdg(BaseRefreshWdg):
 
 
 
-    def get_existing_script_wdg(my, script_path, script, language, is_admin):
+    def get_existing_script_wdg(self, script_path, script, language, is_admin):
 
         div = DivWdg()
 
@@ -3064,7 +3140,7 @@ class ScriptSettingsWdg(BaseRefreshWdg):
 
 
 
-    def get_new_script_wdg(my, is_admin):
+    def get_new_script_wdg(self, is_admin):
 
         div = DivWdg()
 
@@ -3112,15 +3188,15 @@ class ScriptSettingsWdg(BaseRefreshWdg):
 
 class ActionInfoWdg(BaseInfoWdg):
 
-    def get_display(my):
+    def get_display(self):
 
-        top = my.top
+        top = self.top
         top.add_class('spt_action_info_top')
         top.add_style("padding: 20px 0px")
 
-        process = my.kwargs.get("process")
-        pipeline_code = my.kwargs.get("pipeline_code")
-        node_type = my.kwargs.get("node_type")
+        process = self.kwargs.get("process")
+        pipeline_code = self.kwargs.get("pipeline_code")
+        node_type = self.kwargs.get("node_type")
 
         pipeline = Pipeline.get_by_code(pipeline_code)
 
@@ -3188,7 +3264,7 @@ class ActionInfoWdg(BaseInfoWdg):
 
 
 
-        title_wdg = my.get_title_wdg(process, node_type)
+        title_wdg = self.get_title_wdg(process, node_type)
         top.add(title_wdg)
 
 
@@ -3199,12 +3275,12 @@ class ActionInfoWdg(BaseInfoWdg):
         info_div.add_style("margin: 10px 10px 20px 10px")
 
 
-        desc_div = my.get_description_wdg(process_sobj)
+        desc_div = self.get_description_wdg(process_sobj)
         top.add(desc_div)
 
 
 
-        #input_output_wdg = my.get_input_output_wdg(pipeline, process)
+        #input_output_wdg = self.get_input_output_wdg(pipeline, process)
         #top.add(input_output_wdg)
 
 
@@ -3353,7 +3429,7 @@ class ActionInfoWdg(BaseInfoWdg):
 
 
 
-    def get_process_triggers(my):
+    def get_process_triggers(self):
 
         form_wdg = DivWdg()
 
@@ -3421,11 +3497,11 @@ class ActionInfoWdg(BaseInfoWdg):
 
 class UnknownInfoWdg(BaseInfoWdg):
 
-    def get_display(my):
+    def get_display(self):
 
-        process = my.kwargs.get("process")
-        pipeline_code = my.kwargs.get("pipeline_code")
-        node_type = my.kwargs.get("node_type")
+        process = self.kwargs.get("process")
+        pipeline_code = self.kwargs.get("pipeline_code")
+        node_type = self.kwargs.get("node_type")
 
  
 
@@ -3441,19 +3517,19 @@ class UnknownInfoWdg(BaseInfoWdg):
 
 
 
-        top = my.top
+        top = self.top
         top.add_style("padding: 20px 0px")
         top.add_class("spt_approval_info_top")
 
-        process = my.kwargs.get("process")
-        pipeline_code = my.kwargs.get("pipeline_code")
-        node_type = my.kwargs.get("node_type")
+        process = self.kwargs.get("process")
+        pipeline_code = self.kwargs.get("pipeline_code")
+        node_type = self.kwargs.get("node_type")
 
 
         pipeline = Pipeline.get_by_code(pipeline_code)
 
 
-        title_wdg = my.get_title_wdg(process, node_type)
+        title_wdg = self.get_title_wdg(process, node_type)
         top.add(title_wdg)
 
         msg_div = DivWdg()
@@ -3474,11 +3550,11 @@ class UnknownInfoWdg(BaseInfoWdg):
 
 class ApprovalInfoWdg(BaseInfoWdg):
 
-    def get_display(my):
+    def get_display(self):
 
-        process = my.kwargs.get("process")
-        pipeline_code = my.kwargs.get("pipeline_code")
-        node_type = my.kwargs.get("node_type")
+        process = self.kwargs.get("process")
+        pipeline_code = self.kwargs.get("pipeline_code")
+        node_type = self.kwargs.get("node_type")
 
  
 
@@ -3494,19 +3570,19 @@ class ApprovalInfoWdg(BaseInfoWdg):
 
 
 
-        top = my.top
+        top = self.top
         top.add_style("padding: 20px 0px")
         top.add_class("spt_approval_info_top")
 
-        process = my.kwargs.get("process")
-        pipeline_code = my.kwargs.get("pipeline_code")
-        node_type = my.kwargs.get("node_type")
+        process = self.kwargs.get("process")
+        pipeline_code = self.kwargs.get("pipeline_code")
+        node_type = self.kwargs.get("node_type")
 
 
         pipeline = Pipeline.get_by_code(pipeline_code)
 
 
-        title_wdg = my.get_title_wdg(process, node_type)
+        title_wdg = self.get_title_wdg(process, node_type)
         top.add(title_wdg)
 
 
@@ -3517,14 +3593,14 @@ class ApprovalInfoWdg(BaseInfoWdg):
 
 
 
-        desc_div = my.get_description_wdg(process_sobj)
+        desc_div = self.get_description_wdg(process_sobj)
         top.add(desc_div)
 
 
 
 
 
-        input_output_wdg = my.get_input_output_wdg(pipeline, process)
+        input_output_wdg = self.get_input_output_wdg(pipeline, process)
         top.add( input_output_wdg )
 
 
@@ -3629,29 +3705,38 @@ class ConditionInfoWdg(ActionInfoWdg):
 
 class HierarchyInfoWdg(BaseInfoWdg):
 
-    def get_display(my):
+    def get_display(self):
 
-        process = my.kwargs.get("process")
-        pipeline_code = my.kwargs.get("pipeline_code")
-        node_type = my.kwargs.get("node_type")
+        process = self.kwargs.get("process")
+        pipeline_code = self.kwargs.get("pipeline_code")
+        node_type = self.kwargs.get("node_type")
 
-        top = my.top
+
+        pipeline = Pipeline.get_by_code(pipeline_code)
+        search_type = pipeline.get_value("search_type")
+
+        top = self.top
         top.add_style("padding: 20px 0px")
+        top.add_class("spt_hierarchy_top")
 
  
-        title_wdg = my.get_title_wdg(process, node_type)
+        title_wdg = self.get_title_wdg(process, node_type)
         top.add(title_wdg)
 
-        return top
+
+        info_div = DivWdg()
+        top.add(info_div)
+        info_div.add("A hierarchy process is a process that references a sub-workflow.")
+        info_div.add_style("margin: 10px 10px 20px 10px")
 
 
-class DependencyInfoWdg(BaseInfoWdg):
 
-    def get_display(my):
 
-        process = my.kwargs.get("process")
-        pipeline_code = my.kwargs.get("pipeline_code")
-        node_type = my.kwargs.get("node_type")
+        top.add( self.get_description_wdg(pipeline) )
+
+        settings_wdg = DivWdg()
+        top.add(settings_wdg)
+        settings_wdg.add_style("padding: 10px")
 
 
         search = Search("config/process")
@@ -3662,12 +3747,108 @@ class DependencyInfoWdg(BaseInfoWdg):
 
 
 
-        top = my.top
+        workflow = process_sobj.get_json_value("workflow")
+        if not workflow:
+            workflow = {}
+
+
+        search = Search("sthpw/pipeline")
+        search.add_filter("search_type", search_type)
+        search.add_filter("code", pipeline_code, op="!=")
+        subpipelines = search.get_sobjects()
+
+        values = [x.get("code") for x in subpipelines]
+        labels = [x.get("name") for x in subpipelines]
+
+        subpipeline_code = process_sobj.get_value("subpipeline_code")
+
+        settings_wdg.add("<b>Points to a sub Workflow:</b>")
+        select = SelectWdg("subpipeline")
+        settings_wdg.add(select)
+        if subpipeline_code:
+            select.set_value(subpipeline_code)
+        select.set_option("values", values)
+        select.set_option("labels", labels)
+        select.add_empty_option("-- Select --")
+        settings_wdg.add("<span style='opacity: 0.6'>Reference another workflow</span>")
+
+        settings_wdg.add("<br/>")
+        settings_wdg.add("<br/>")
+
+
+        # auto create sb tasks
+        values = ["subtasks_only", "top_only", "all", "none"]
+        labels = ["Create SubTasks Only", "Top Task Only", "Both Top and SubTasks", "No Tasks"]
+
+        task_creation = workflow.get("task_creation") or "subtasks_only"
+
+        settings_wdg.add("<b>Task Creation:</b>")
+        select = SelectWdg("task_creation")
+        settings_wdg.add(select)
+        if task_creation:
+            select.set_value(task_creation)
+        select.set_option("values", values)
+        select.set_option("labels", labels)
+        select.add_empty_option("-- Select --")
+        settings_wdg.add("<span style='opacity: 0.6'>Determine whether tasks of the referenced workflow are created when generating an inital schedule</span>")
+
+        settings_wdg.add("<br/>")
+        settings_wdg.add("<br/>")
+
+
+
+
+        save_button = ActionButtonWdg(title="Save", color="primary")
+        settings_wdg.add(save_button)
+        save_button.add_style("float: right")
+        save_button.add_style("padding-top: 3px")
+        save_button.add_behavior( {
+            'type': 'click_up',
+            'process': process,
+            'pipeline_code': pipeline_code,
+            'cbjs_action': '''
+            var top = bvr.src_el.getParent(".spt_hierarchy_top");
+            var values = spt.api.get_input_values(top, null, false);
+            var class_name = 'tactic.ui.tools.ProcessInfoCmd';
+            var kwargs = values;
+            values['node_type'] = 'hierarchy';
+            values['process'] = bvr.process;
+            values['pipeline_code'] = bvr.pipeline_code;
+
+            var server = TacticServerStub.get();
+            server.execute_cmd( class_name, values);
+            
+            '''
+        } )
+
+
+ 
+        return top
+
+
+class DependencyInfoWdg(BaseInfoWdg):
+
+    def get_display(self):
+
+        process = self.kwargs.get("process")
+        pipeline_code = self.kwargs.get("pipeline_code")
+        node_type = self.kwargs.get("node_type")
+
+
+        search = Search("config/process")
+        search.add_filter("pipeline_code", pipeline_code)
+        search.add_filter("process", process)
+        process_sobj = search.get_sobject()
+
+
+
+
+        top = self.top
         top.add_style("padding: 20px 0px")
         top.add_class("spt_dependency_top")
 
  
-        title_wdg = my.get_title_wdg(process, node_type)
+        title_wdg = self.get_title_wdg(process, node_type)
         top.add(title_wdg)
 
 
@@ -3842,11 +4023,11 @@ class DependencyInfoWdg(BaseInfoWdg):
 
 class ProgressInfoWdg(BaseInfoWdg):
 
-    def get_display(my):
+    def get_display(self):
 
-        process = my.kwargs.get("process")
-        pipeline_code = my.kwargs.get("pipeline_code")
-        node_type = my.kwargs.get("node_type")
+        process = self.kwargs.get("process")
+        pipeline_code = self.kwargs.get("pipeline_code")
+        node_type = self.kwargs.get("node_type")
 
 
         search = Search("config/process")
@@ -3857,12 +4038,12 @@ class ProgressInfoWdg(BaseInfoWdg):
 
 
 
-        top = my.top
+        top = self.top
         top.add_style("padding: 20px 0px")
         top.add_class("spt_progress_top")
 
  
-        title_wdg = my.get_title_wdg(process, node_type)
+        title_wdg = self.get_title_wdg(process, node_type)
         top.add(title_wdg)
 
 
@@ -4067,20 +4248,20 @@ class ProgressInfoWdg(BaseInfoWdg):
 
 class TaskStatusInfoWdg(BaseInfoWdg):
 
-    def get_display(my):
+    def get_display(self):
 
-        process = my.kwargs.get("process")
-        pipeline_code = my.kwargs.get("pipeline_code")
-        node_type = my.kwargs.get("node_type")
+        process = self.kwargs.get("process")
+        pipeline_code = self.kwargs.get("pipeline_code")
+        node_type = self.kwargs.get("node_type")
 
 
 
-        top = my.top
+        top = self.top
         top.add_style("padding: 20px 0px")
 
         top.add_class("spt_status_top")
  
-        title_wdg = my.get_title_wdg(process, node_type, show_node_type_select=False)
+        title_wdg = self.get_title_wdg(process, node_type, show_node_type_select=False)
         top.add(title_wdg)
 
 
@@ -4242,48 +4423,50 @@ class TaskStatusInfoWdg(BaseInfoWdg):
 
 class ProcessInfoCmd(Command):
 
-    def execute(my):
+    def execute(self):
 
-        node_type = my.kwargs.get("node_type")
+        node_type = self.kwargs.get("node_type")
 
         if node_type in ["action", "condition"]:
-            return my.handle_action()
+            return self.handle_action()
 
         if node_type == 'dependency':
-            return my.handle_dependency()
+            return self.handle_dependency()
 
         if node_type == 'status':
-            return my.handle_status()
+            return self.handle_status()
 
         if node_type == 'approval':
-            return my.handle_approval()
+            return self.handle_approval()
 
+        if node_type == 'hierarchy':
+            return self.handle_hierarchy()
 
         if node_type == 'progress':
-            return my.handle_progress()
+            return self.handle_progress()
 
 
 
 
 
-    def handle_action(my):
+    def handle_action(self):
 
         is_admin = Environment.get_security().is_admin()
 
 
-        action = my.kwargs.get("action") or "create_new"
-        script = my.kwargs.get("script")
-        script_path = my.kwargs.get("script_path")
-        on_action_class = my.kwargs.get("on_action_class")
+        action = self.kwargs.get("action") or "create_new"
+        script = self.kwargs.get("script")
+        script_path = self.kwargs.get("script_path")
+        on_action_class = self.kwargs.get("on_action_class")
 
-        execute_mode = my.kwargs.get("execute_mode")
+        execute_mode = self.kwargs.get("execute_mode")
 
-        pipeline_code = my.kwargs.get("pipeline_code")
-        process = my.kwargs.get("process")
+        pipeline_code = self.kwargs.get("pipeline_code")
+        process = self.kwargs.get("process")
 
 
         if is_admin:
-            language = my.kwargs.get("language")
+            language = self.kwargs.get("language")
             if not language:
                 language = "python"
         else:
@@ -4368,10 +4551,10 @@ class ProcessInfoCmd(Command):
                 sudo.exit()
 
 
-    def handle_dependency(my):
+    def handle_dependency(self):
 
-        pipeline_code = my.kwargs.get("pipeline_code")
-        process = my.kwargs.get("process")
+        pipeline_code = self.kwargs.get("pipeline_code")
+        process = self.kwargs.get("process")
 
         pipeline = Pipeline.get_by_code(pipeline_code)
 
@@ -4381,11 +4564,11 @@ class ProcessInfoCmd(Command):
         process_sobj = search.get_sobject()
 
 
-        related_search_type = my.kwargs.get("related_search_type")
-        related_process = my.kwargs.get("related_process")
-        related_status = my.kwargs.get("related_status")
-        related_scope = my.kwargs.get("related_scope")
-        related_wait = my.kwargs.get("related_wait")
+        related_search_type = self.kwargs.get("related_search_type")
+        related_process = self.kwargs.get("related_process")
+        related_status = self.kwargs.get("related_status")
+        related_scope = self.kwargs.get("related_scope")
+        related_wait = self.kwargs.get("related_wait")
 
         workflow = process_sobj.get_json_value("workflow")
         if not workflow:
@@ -4406,10 +4589,10 @@ class ProcessInfoCmd(Command):
         process_sobj.commit()
 
 
-    def handle_approval(my):
-        pipeline_code = my.kwargs.get("pipeline_code")
-        process = my.kwargs.get("process")
-        assigned = my.kwargs.get("assigned")
+    def handle_approval(self):
+        pipeline_code = self.kwargs.get("pipeline_code")
+        process = self.kwargs.get("process")
+        assigned = self.kwargs.get("assigned")
 
         pipeline = Pipeline.get_by_code(pipeline_code)
 
@@ -4426,10 +4609,10 @@ class ProcessInfoCmd(Command):
         process_sobj.set_json_value("workflow", workflow)
         process_sobj.commit()
 
-    def handle_status(my):
+    def handle_status(self):
 
-        pipeline_code = my.kwargs.get("pipeline_code")
-        process = my.kwargs.get("process")
+        pipeline_code = self.kwargs.get("pipeline_code")
+        process = self.kwargs.get("process")
 
         pipeline = Pipeline.get_by_code(pipeline_code)
         
@@ -4441,11 +4624,11 @@ class ProcessInfoCmd(Command):
         if not process_sobj:
             return
 
-        direction = my.kwargs.get("direction")
-        status = my.kwargs.get("status")
-        mapping = my.kwargs.get("mapping")
-        color = my.kwargs.get("color")
-        assigned = my.kwargs.get("assigned")
+        direction = self.kwargs.get("direction")
+        status = self.kwargs.get("status")
+        mapping = self.kwargs.get("mapping")
+        color = self.kwargs.get("color")
+        assigned = self.kwargs.get("assigned")
 
         workflow = process_sobj.get_json_value("workflow")
         if not workflow:
@@ -4469,10 +4652,39 @@ class ProcessInfoCmd(Command):
 
 
 
-    def handle_progress(my):
+    def handle_hierarchy(self):
 
-        pipeline_code = my.kwargs.get("pipeline_code")
-        process = my.kwargs.get("process")
+
+        pipeline_code = self.kwargs.get("pipeline_code")
+        process = self.kwargs.get("process")
+
+        pipeline = Pipeline.get_by_code(pipeline_code)
+        search_type = pipeline.get_value("search_type")
+
+        search = Search("config/process")
+        search.add_filter("pipeline_code", pipeline_code)
+        search.add_filter("process", process)
+        process_sobj = search.get_sobject()
+
+        data = process_sobj.get_json_value("workflow") or {}
+
+        subpipeline_code = self.kwargs.get("subpipeline")
+        process_sobj.set_value("subpipeline_code", subpipeline_code)
+        process_sobj.commit()
+
+        task_creation = self.kwargs.get("task_creation") or "subtasks_only"
+        data['task_creation'] = task_creation
+
+        process_sobj.set_value("workflow", data)
+
+
+        process_sobj.commit()
+ 
+
+    def handle_progress(self):
+
+        pipeline_code = self.kwargs.get("pipeline_code")
+        process = self.kwargs.get("process")
 
         pipeline = Pipeline.get_by_code(pipeline_code)
         search_type = pipeline.get_value("search_type")
@@ -4483,12 +4695,12 @@ class ProcessInfoCmd(Command):
         process_sobj = search.get_sobject()
 
 
-        related_search_type = my.kwargs.get("related_search_type")
-        related_pipeline_code = my.kwargs.get("related_pipeline_code")
-        related_process = my.kwargs.get("related_process")
+        related_search_type = self.kwargs.get("related_search_type")
+        related_pipeline_code = self.kwargs.get("related_pipeline_code")
+        related_process = self.kwargs.get("related_process")
         if not related_process:
             related_process = process
-        related_scope = my.kwargs.get("related_scope")
+        related_scope = self.kwargs.get("related_scope")
         if not related_scope:
             related_scope = "local"
 
@@ -4553,28 +4765,28 @@ class PipelineEditorWdg(BaseRefreshWdg):
     '''This is the pipeline on its own, with various buttons and interface
     to help in building the pipelines.  It contains the PipelineCanvasWdg'''
 
-    def get_display(my):
-        top = my.top
-        my.set_as_panel(top)
+    def get_display(self):
+        top = self.top
+        self.set_as_panel(top)
         top.add_class("spt_pipeline_editor_top")
 
-        my.save_new_event = my.kwargs.get("save_new_event")
-        my.show_gear = my.kwargs.get("show_gear")
+        self.save_new_event = self.kwargs.get("save_new_event")
+        self.show_gear = self.kwargs.get("show_gear")
 
         inner = DivWdg()
         top.add(inner)
 
 
-        inner.add(my.get_shelf_wdg() )
+        inner.add(self.get_shelf_wdg() )
 
 
-        my.width = my.kwargs.get("width")
-        if not my.width:
-            #my.width = "1300"
-            my.width = "auto"
-        my.height = my.kwargs.get("height")
-        if not my.height:
-            my.height = 600
+        self.width = self.kwargs.get("width")
+        if not self.width:
+            #self.width = "1300"
+            self.width = "auto"
+        self.height = self.kwargs.get("height")
+        if not self.height:
+            self.height = 600
 
 
         
@@ -4582,8 +4794,9 @@ class PipelineEditorWdg(BaseRefreshWdg):
         inner.add(canvas_top)
         canvas_top.add_class("spt_pipeline_wrapper")
         canvas_top.add_style("position: relative")
-        canvas = my.get_canvas()
-        my.unique_id = canvas.get_unique_id()
+        canvas_top.add_color("background", "background", -2)
+        canvas = self.get_canvas()
+        self.unique_id = canvas.get_unique_id()
         canvas_top.add(canvas)
 
 
@@ -4591,7 +4804,7 @@ class PipelineEditorWdg(BaseRefreshWdg):
         div = DivWdg()
         inner.add(div)
 
-        pipeline_str = my.kwargs.get("pipeline")
+        pipeline_str = self.kwargs.get("pipeline")
         if pipeline_str:
             pipelines = pipeline_str.split("|")
 
@@ -4612,7 +4825,7 @@ class PipelineEditorWdg(BaseRefreshWdg):
 
 
         # open connection dialog everytime a connection is made
-        event_name = "%s|node_create" % my.unique_id
+        event_name = "%s|node_create" % self.unique_id
 
         # Note this goes through every node, every time?
         div.add_behavior( {
@@ -4639,7 +4852,7 @@ class PipelineEditorWdg(BaseRefreshWdg):
 
 
         # open connection dialog everytime a connection is made
-        event_name = "%s|node_rename" % my.unique_id
+        event_name = "%s|node_rename" % self.unique_id
 
         # Note this goes through every node, every time?
         div.add_behavior( {
@@ -4667,7 +4880,7 @@ class PipelineEditorWdg(BaseRefreshWdg):
  
 
         # open connection dialog everytime a connection is made
-        event_name = "%s|unselect_all" % my.unique_id
+        event_name = "%s|unselect_all" % self.unique_id
         div.add_behavior( {
         'type': 'listen',
         'event_name': event_name,
@@ -4692,13 +4905,13 @@ class PipelineEditorWdg(BaseRefreshWdg):
  
 
 
-        if my.kwargs.get("is_refresh") == 'true':
+        if self.kwargs.get("is_refresh") == 'true':
             return inner
         else:
             return top
 
 
-    def get_shelf_wdg(my):
+    def get_shelf_wdg(self):
  
         shelf_wdg = DivWdg()
         shelf_wdg.add_style("padding: 5px")
@@ -4706,7 +4919,7 @@ class PipelineEditorWdg(BaseRefreshWdg):
         shelf_wdg.add_style("overflow-x: hidden")
         shelf_wdg.add_style("min-width: 400px")
 
-        show_shelf = my.kwargs.get("show_shelf")
+        show_shelf = self.kwargs.get("show_shelf")
         show_shelf = True
         if show_shelf in ['false', False]:
             show_shelf = False
@@ -4729,21 +4942,21 @@ class PipelineEditorWdg(BaseRefreshWdg):
             spacing_div.add_style("float: left")
 
 
-        show_gear = my.kwargs.get("show_gear")
-        button_div = my.get_buttons_wdg(show_gear);
+        show_gear = self.kwargs.get("show_gear")
+        button_div = self.get_buttons_wdg(show_gear);
         button_div.add_style("float: left")
         shelf_wdg.add(button_div)
 
         shelf_wdg.add(spacing_divs[0])
 
-        #group_div = my.get_pipeline_select_wdg();
+        #group_div = self.get_pipeline_select_wdg();
         #group_div.add_style("float: left")
         #group_div.add_style("margin-top: 1px")
         #group_div.add_style("margin-left: 10px")
         #shelf_wdg.add(group_div)
         #shelf_wdg.add(spacing_divs[1])
 
-        button_div = my.get_zoom_buttons_wdg();
+        button_div = self.get_zoom_buttons_wdg();
         button_div.add_style("margin-left: 10px")
         button_div.add_style("margin-right: 15px")
         button_div.add_style("float: left")
@@ -4754,13 +4967,13 @@ class PipelineEditorWdg(BaseRefreshWdg):
         """
         shelf_wdg.add(spacing_divs[2])
 
-        button_div = my.get_schema_buttons_wdg();
+        button_div = self.get_schema_buttons_wdg();
         button_div.add_style("margin-left: 10px")
         button_div.add_style("float: left")
         shelf_wdg.add(button_div)
         """
 
-        if my.kwargs.get("show_help") not in ['false', False]:
+        if self.kwargs.get("show_help") not in ['false', False]:
             help_button = ActionButtonWdg(title="?", tip="Show Workflow Editor Help", size='s')
             shelf_wdg.add(help_button)
             help_button.add_style("padding-top: 3px")
@@ -4777,14 +4990,14 @@ class PipelineEditorWdg(BaseRefreshWdg):
         return shelf_wdg
 
 
-    def get_canvas(my):
-        is_editable = my.kwargs.get("is_editable")
-        canvas = PipelineToolCanvasWdg(height=my.height, width=my.width, is_editable=is_editable)
+    def get_canvas(self):
+        is_editable = self.kwargs.get("is_editable")
+        canvas = PipelineToolCanvasWdg(height=self.height, width=self.width, is_editable=is_editable)
         return canvas
 
 
 
-    def get_buttons_wdg(my, show_gear):
+    def get_buttons_wdg(self, show_gear):
         from pyasm.widget import IconWdg
         from tactic.ui.widget.button_new_wdg import ButtonNewWdg, ButtonRowWdg
 
@@ -4808,7 +5021,7 @@ class PipelineEditorWdg(BaseRefreshWdg):
         'type': 'listen',
         'event_name': 'pipeline|save_button',
         'project_code': project_code,
-        'save_event': my.save_new_event,
+        'save_event': self.save_new_event,
         'cbjs_action': '''
         var editor_top = bvr.src_el.getParent(".spt_pipeline_editor_top");
         editor_top.removeClass("spt_has_changes");
@@ -5189,7 +5402,7 @@ class PipelineEditorWdg(BaseRefreshWdg):
         return button_row
 
 
-    def get_zoom_buttons_wdg(my):
+    def get_zoom_buttons_wdg(self):
         from pyasm.widget import IconWdg
         from tactic.ui.widget.button_new_wdg import ButtonNewWdg, ButtonRowWdg, IconButtonWdg, SingleButtonWdg
 
@@ -5272,7 +5485,7 @@ class PipelineEditorWdg(BaseRefreshWdg):
 
 
 
-    def get_schema_buttons_wdg(my):
+    def get_schema_buttons_wdg(self):
         from pyasm.widget import IconWdg
         from tactic.ui.widget.button_new_wdg import ButtonNewWdg, ButtonRowWdg, SingleButtonWdg
 
@@ -5308,7 +5521,7 @@ class PipelineEditorWdg(BaseRefreshWdg):
 
 
 
-    def get_pipeline_select_wdg(my):
+    def get_pipeline_select_wdg(self):
         div = DivWdg()
         div.add_style("padding: 3px")
 
@@ -5348,7 +5561,7 @@ class TriggerListWdg(BaseRefreshWdg):
     'process': "The process in the pipeline that is to be displayed"
     }
 
-    def get_display(my):
+    def get_display(self):
         top = DivWdg()
         top.add_class("spt_tiggers_top")
 
@@ -5390,7 +5603,7 @@ class TriggerListWdg(BaseRefreshWdg):
         from tactic.ui.filter import FilterData
         from tactic.ui.container import DynamicListWdg
         list_wdg = DynamicListWdg()
-        triggers_wdg = my.get_triggers_wdg( None, FilterData() )
+        triggers_wdg = self.get_triggers_wdg( None, FilterData() )
         list_wdg.add_template(triggers_wdg)
 
         search = Search("config/trigger")
@@ -5402,7 +5615,7 @@ class TriggerListWdg(BaseRefreshWdg):
             data = trigger.get_value("data")
             filter_data = FilterData(data)
 
-            triggers_wdg = my.get_triggers_wdg(trigger, filter_data)
+            triggers_wdg = self.get_triggers_wdg(trigger, filter_data)
             div = DivWdg()
             div.add(triggers_wdg)
             div.add_style("padding: 10px")
@@ -5413,15 +5626,15 @@ class TriggerListWdg(BaseRefreshWdg):
         return top
 
 
-    def get_triggers_wdg(my, trigger, filter_data=None):
+    def get_triggers_wdg(self, trigger, filter_data=None):
         div = DivWdg()
         div.add_class("spt_triggers")
 
         trigger_info = filter_data.get_values_by_index("trigger")
-        my.process_name = trigger_info.get("process")
-        if not my.process_name:
-            my.process_name = my.kwargs.get("process")
-        if not my.process_name:
+        self.process_name = trigger_info.get("process")
+        if not self.process_name:
+            self.process_name = self.kwargs.get("process")
+        if not self.process_name:
             div.add("No process selected")
             return div
 
@@ -5443,7 +5656,7 @@ class TriggerListWdg(BaseRefreshWdg):
 
         trigger_div.add_class("spt_list_item")
         trigger_div.add( HiddenWdg("prefix", "trigger") )
-        trigger_div.add( HiddenWdg("process", my.process_name) )
+        trigger_div.add( HiddenWdg("process", self.process_name) )
 
 
         from pyasm.widget import IconButtonWdg, IconWdg
@@ -5602,9 +5815,9 @@ class TriggerListWdg(BaseRefreshWdg):
 
 class PipelineTaskTriggerCommitCbk(Command):
     
-    def execute(my):
+    def execute(self):
 
-        data_str = my.kwargs.get("data")
+        data_str = self.kwargs.get("data")
         if not data_str:
             print("No data supplied")
             return
@@ -5643,13 +5856,13 @@ class PipelineTaskTriggerCommitCbk(Command):
 
 class PipelinePropertyWdg(BaseRefreshWdg):
 
-    def get_display(my):
+    def get_display(self):
         div = DivWdg()
         div.add_class("spt_pipeline_properties_top")
         div.add_style("min-width: 500px")
 
-        process = my.kwargs.get("process")
-        pipeline_code = my.kwargs.get("pipeline_code")
+        process = self.kwargs.get("process")
+        pipeline_code = self.kwargs.get("pipeline_code")
 
 
         from tactic.ui.app import HelpButtonWdg
@@ -5733,7 +5946,7 @@ class PipelinePropertyWdg(BaseRefreshWdg):
 
         table.add_behavior( {
         'type': 'load',
-        'cbjs_action': my.get_onload_js()
+        'cbjs_action': self.get_onload_js()
         } )
 
         
@@ -5924,7 +6137,7 @@ class PipelinePropertyWdg(BaseRefreshWdg):
 
         return div
 
-    def get_onload_js(my):
+    def get_onload_js(self):
         return r'''
 
 spt.pipeline_properties = {};
@@ -6100,15 +6313,15 @@ spt.pipeline_properties.set_properties2 = function(prop_top, node, properties) {
 
 class PipelineSaveCbk(Command):
     '''Callback executed when the Save button or other Save menu items are pressed in Project Workflow'''
-    def get_title(my):
+    def get_title(self):
         return "Save a pipeline"
 
-    def execute(my):
-        pipeline_sk = my.kwargs.get('search_key')
+    def execute(self):
+        pipeline_sk = self.kwargs.get('search_key')
 
-        pipeline_xml = my.kwargs.get('pipeline')
-        pipeline_color = my.kwargs.get('color')
-        project_code = my.kwargs.get('project_code')
+        pipeline_xml = self.kwargs.get('pipeline')
+        pipeline_color = self.kwargs.get('color')
+        project_code = self.kwargs.get('project_code')
 
         server = TacticServerStub.get(protocol='local')
         data =  {'pipeline':pipeline_xml, 'color':pipeline_color}
@@ -6135,17 +6348,17 @@ class PipelineSaveCbk(Command):
 
         pipeline.update_dependencies()
         
-        my.description = "Updated workflow [%s]" % pipeline_code
+        self.description = "Updated workflow [%s]" % pipeline_code
         
 
 
 class ProcessCopyCmd(Command):
     '''Deep process copy'''
 
-    def execute(my):
+    def execute(self):
 
-        pipeline_code = my.kwargs.get("pipeline_code")
-        process = my.kwargs.get("process")
+        pipeline_code = self.kwargs.get("pipeline_code")
+        process = self.kwargs.get("process")
 
 
         search = Search("config/process")
@@ -6189,7 +6402,7 @@ class ProcessCopyCmd(Command):
 
 class PipelineCopyCmd(Command):
 
-    def execute(my):
+    def execute(self):
         pass
 
 
