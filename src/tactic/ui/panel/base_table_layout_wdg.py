@@ -790,10 +790,10 @@ class BaseTableLayoutWdg(BaseConfigWdg):
 
 
 
-    def get_setting(my, name):
-        settings = my.kwargs.get("settings") or {}
-        #james
-        '''
+    def get_setting(self, name):
+        settings = self.kwargs.get("settings") or {}
+
+        """
         settings = {
             "gear": {
                     'Tasks': ['Show Tasks'],
@@ -808,7 +808,7 @@ class BaseTableLayoutWdg(BaseConfigWdg):
         }
         #settings = None
         #settings = "save|insert|search|keyword_search"
-       ''' 
+        """
 
 
         settings_default = {
@@ -835,7 +835,7 @@ class BaseTableLayoutWdg(BaseConfigWdg):
                     gear_settings = jsonloads(gear_settings)
                 else:
                     gear_settings = gear_settings.split("|")
-            #james
+
             if isinstance(gear_settings, list):
                 new_gear_settings = {}
                 for item in gear_settings:
@@ -973,7 +973,6 @@ class BaseTableLayoutWdg(BaseConfigWdg):
                 search_type=self.search_type, view=self.view,
                 parent_key=self.parent_key,
                 cbjs_post_delete=cbjs_post_delete,
-                #james
                 show_delete=show_delete,
                 custom_menus=custom_gear_menus,
                 show_retired=show_retired, embedded_table=embedded_table,
