@@ -31,12 +31,12 @@ class HashPanelWdg(BaseRefreshWdg):
 
 
 
-    def get_display(my):
+    def get_display(self):
 
-        hash = my.kwargs.get("hash")
+        hash = self.kwargs.get("hash")
 
-        top = my.top
-        widget = my.get_widget_from_hash(hash, kwargs=my.kwargs)
+        top = self.top
+        widget = self.get_widget_from_hash(hash, kwargs=self.kwargs)
         top.add(widget)
         return top
 
@@ -202,8 +202,10 @@ class HashPanelWdg(BaseRefreshWdg):
                 return None
 
 
-
-            config = SideBarBookmarkMenuWdg.get_config("SideBarWdg", link, personal=personal)
+            # This is used to find a sub menu (?)
+            #view = link
+            view = "definition"
+            config = SideBarBookmarkMenuWdg.get_config("SideBarWdg", view, personal=personal)
 
             view = config.get_element_attribute(link, 'view')
             if view:

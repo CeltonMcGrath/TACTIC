@@ -262,14 +262,14 @@ spt.behavior.run_cbjs = function( cbjs_str, bvr, evt, mouse_411 )
         try {
             run_bvr();
         } catch(e) {
-            log.error( "___________________________________________________________________________________________" );
-            log.error( "Caught javascript ERROR: " + e );
-            log.error( "  -- error occurred while running call-back javascript in spt.behavior.run_cbjs()" );
-            log.error( "..........................................................................................." );
-            log.error( " " );
-            log.error( cbjs_str );
-            log.error( " " );
-            log.error( "___________________________________________________________________________________________" );
+            spt.js_log.error( "___________________________________________________________________________________________" );
+            spt.js_log.error( "Caught javascript ERROR: " + e );
+            spt.js_log.error( "  -- error occurred while running call-back javascript in spt.behavior.run_cbjs()" );
+            spt.js_log.error( "..........................................................................................." );
+            spt.js_log.error( " " );
+            spt.js_log.error( cbjs_str );
+            spt.js_log.error( " " );
+            spt.js_log.error( "___________________________________________________________________________________________" );
             throw(e);
         }
     }
@@ -440,8 +440,8 @@ spt.behavior.replace_table_child_element = function(el, new_inner_html)
     var parent_node = el.parentNode;
 
     if( ! parent_node ) {
-        log.error( "ERROR: NO parent_node found in 'spt.behavior.replace_table_child_element()' ... here is element:" );
-        log.error( el );
+        spt.js_log.error( "ERROR: NO parent_node found in 'spt.behavior.replace_table_child_element()' ... here is element:" );
+        spt.js_log.error( el );
         return null;
     }
 
@@ -473,7 +473,7 @@ spt.behavior.replace_table_child_element = function(el, new_inner_html)
     }
 
     if( ! first_child ) {
-        log.error( "ERROR: NO first child found in temporary table element in " +
+        spt.js_log.error( "ERROR: NO first child found in temporary table element in " +
                    "'spt.behavior.replace_table_child_element()'" );
         // FIXME: previously the check was comparing against node type 3 and so it was always going into
         //        this block, but the code below didn't seem to do anything. This error stuff should
@@ -764,6 +764,26 @@ spt.behavior._CB_focus = function( evt )
 
 
 
+spt.behavior._CB_scroll = function( evt )
+{
+    if( ! evt ) { evt = window.event; }
+
+    var scroll_el = spt.behavior.find_bvr_target( "scroll", spt.get_event_target(evt) );
+    if( 'scroll' in scroll_el.spt_bvrs ) {
+        var oc_bvrs = scroll_el.spt_bvrs['scroll'];
+        for( var c=0; c < oc_bvrs.length; c++ ) {
+            var bvr = oc_bvrs[c];
+            if( bvr ) {
+                spt.behavior.run_preaction_action_postaction( bvr, evt, null );
+            }
+        }
+    }
+}
+
+
+
+
+
 spt.behavior._mark_bvr_event_registered = function( el, bvr_type )
 {
     // NOTE: cannot use 'hasOwnProperty' on an HTML element object as it is not supported in IE, that same
@@ -886,6 +906,13 @@ spt.behavior._register_bvr_event = function( el, bvr )
                 spt.behavior._mark_bvr_event_registered( el, bvr.type );
             }
         }
+        else if( bvr.type == 'scroll' ) {
+            if( ! spt.behavior._bvr_event_is_registered( el, bvr.type ) ) {
+                el.addEvent( "scroll", spt.behavior._CB_scroll );
+                spt.behavior._mark_bvr_event_registered( el, bvr.type );
+            }
+        }
+ 
         else if( ['mouseleave','mouseenter','mouseover','mouseout'].contains(bvr.type) ) {
             if( ! spt.behavior._bvr_event_is_registered( el, bvr.type ) ) {
                 el.addEvent( bvr.type, function(e, name) {
@@ -1136,17 +1163,6 @@ spt.behavior._construct_bvr = function( el, bvr_spec )
 
     el.spt_bvrs[ type ].push( bvr );
 
-    /*
-    var count = spt.count[type];
-    if (!count) count = 1
-    else (count += 1);
-    spt.count[type] = count;
-
-    if ( type == 'click_up' ) {
-        console.log(bvr);
-    }
-    */
-    
 
 }
 

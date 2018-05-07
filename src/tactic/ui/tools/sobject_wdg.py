@@ -44,47 +44,66 @@ class SObjectDetailWdg(BaseRefreshWdg):
         'type': 'SelectWdg',
         'values': 'true|false',
         'order': 2
-    }
+    },
+
+    'title_view': {
+        'description': 'Determine the "title" view (top part of the detail view)',
+        'category': 'Options',
+        'type': 'TextWdg',
+        'order': 3
+    },
+
 
     }
 
 
-    def init(my):
-        my.show_task_process = my.kwargs.get('show_task_process')
+    def init(self):
+        self.show_task_process = self.kwargs.get('show_task_process')
 
-    def get_title_wdg(my):
+    def get_title_wdg(self):
+
+
+
+        title_view = self.kwargs.get("title_view")
+        if title_view:
+            from tactic.ui.panel import CustomLayoutWdg
+            widget = CustomLayoutWdg(view=title_view)
+            widget.kwargs['parent'] = self.parent
+            widget.kwargs['sobject'] = self.sobject
+            widget.kwargs['search_key'] = self.sobject.get_search_key()
+            return widget
+
+
 
         search = Search("config/widget_config")
         search.add_filter("view", "detail_title")
-        search.add_filter("search_type", my.search_type)
+        search.add_filter("search_type", self.search_type)
         config = search.get_sobject()
         if config:
             element_names = config.get_element_names()
             if "title" in element_names:
                 widget = config.get_display_widget("title")
                 if widget:
-                    widget.kwargs['parent'] = my.parent
-                    widget.kwargs['sobject'] = my.sobject
-                    widget.kwargs['search_key'] = my.sobject.get_search_key()
+                    widget.kwargs['parent'] = self.parent
+                    widget.kwargs['sobject'] = self.sobject
+                    widget.kwargs['search_key'] = self.sobject.get_search_key()
                     return widget
- 
 
-
-        if my.parent:
-            code = my.parent.get_value("code", no_exception=True)
-            name = my.parent.get_value("name", no_exception=True)
-            desc = my.parent.get_value("description", no_exception=True)
-            status = my.parent.get_value("status", no_exception=True)
-            search_type_obj = my.parent.get_search_type_obj()
+        if self.parent:
+            code = self.parent.get_value("code", no_exception=True)
+            name = self.parent.get_value("name", no_exception=True)
+            desc = self.parent.get_value("description", no_exception=True)
+            status = self.parent.get_value("status", no_exception=True)
+            search_type_obj = self.parent.get_search_type_obj()
         else:
-            code = my.sobject.get_value("code", no_exception=True)
-            name = my.sobject.get_value("name", no_exception=True)
-            desc = my.sobject.get_value("description", no_exception=True)
-            status = my.sobject.get_value("status", no_exception=True)
-            search_type_obj = my.sobject.get_search_type_obj()
+            code = self.sobject.get_value("code", no_exception=True)
+            name = self.sobject.get_value("name", no_exception=True)
+            desc = self.sobject.get_value("description", no_exception=True)
+            status = self.sobject.get_value("status", no_exception=True)
+            search_type_obj = self.sobject.get_search_type_obj()
 
 
-
+        # show a default title
         div = DivWdg()
         div.add_style("padding: 10px 15px")
 
@@ -157,11 +176,11 @@ class SObjectDetailWdg(BaseRefreshWdg):
 
 
 
-    def get_display(my):
+    def get_display(self):
 
-        my.sobject = my.get_sobject()
+        self.sobject = self.get_sobject()
 
-        if not my.sobject:
+        if not self.sobject:
             widget = DivWdg()
             widget.add("SObject does not exist or no longer exists")
             widget.add_style("margin: 100px auto")
@@ -172,60 +191,59 @@ class SObjectDetailWdg(BaseRefreshWdg):
             widget.add_border()
             return widget
 
-        if not my.__class__.__name__ == "SnapshotDetailWdg" and my.sobject.get_base_search_type() == "sthpw/snapshot":
-            widget = SnapshotDetailWdg(**my.kwargs)
+        if not self.__class__.__name__ == "SnapshotDetailWdg" and self.sobject.get_base_search_type() == "sthpw/snapshot":
+            widget = SnapshotDetailWdg(**self.kwargs)
             return widget
 
 
 
-        top = my.top
+        top = self.top
         top.add_class("spt_detail_top")
-        top.add_color("background", "background")
-        top.add_color("color", "color")
+        #top.add_color("background", "background")
+        #top.add_color("color", "color")
 
 
-        if not my.sobject:
+        if not self.sobject:
             top.add("No SObject defined for this widget")
             return top
 
 
-        if my.parent:
-            my.search_type = my.parent.get_base_search_type()
-            my.search_key = SearchKey.get_by_sobject(my.parent)
-            top.add_attr("spt_parent_key", my.search_key) 
-            my.pipeline_code = my.parent.get_value("pipeline_code", no_exception=True)
-            my.full_search_type = my.parent.get_search_type()
+        if self.parent:
+            self.search_type = self.parent.get_base_search_type()
+            self.search_key = SearchKey.get_by_sobject(self.parent)
+            top.add_attr("spt_parent_key", self.search_key) 
+            self.pipeline_code = self.parent.get_value("pipeline_code", no_exception=True)
+            self.full_search_type = self.parent.get_search_type()
         else:
-            my.pipeline_code = my.sobject.get_value("pipeline_code", no_exception=True)
-            my.search_type = my.sobject.get_base_search_type()
-            my.search_key = SearchKey.get_by_sobject(my.sobject)
-            my.full_search_type = my.sobject.get_search_type()
+            self.pipeline_code = self.sobject.get_value("pipeline_code", no_exception=True)
+            self.search_type = self.sobject.get_base_search_type()
+            self.search_key = SearchKey.get_by_sobject(self.sobject)
+            self.full_search_type = self.sobject.get_search_type()
 
-        if not my.pipeline_code:
-            my.pipeline_code = 'default'
+        if not self.pipeline_code:
+            self.pipeline_code = 'default'
 
 
-        my.set_as_panel(top)
+        self.set_as_panel(top)
 
 
 
         # look for a custom view for the sobject detail
-        custom_view = my.kwargs.get("view")
-        use_default = my.kwargs.get("use_default")
+        custom_view = self.kwargs.get("view")
+        use_default = self.kwargs.get("use_default")
         if use_default not in ['true', True] and not custom_view:
             from pyasm.biz import ProjectSetting
             key = "sobject_detail_view"
-            custom_view = ProjectSetting.get_value_by_key(key, search_type=my.sobject.get_base_search_type())
-
+            custom_view = ProjectSetting.get_value_by_key(key, search_type=self.sobject.get_base_search_type())
 
         if custom_view:
             from tactic.ui.panel import CustomLayoutWdg
-            selected = my.kwargs.get("selected") or ""
+            selected = self.kwargs.get("selected") or ""
             layout = CustomLayoutWdg(
                     view=custom_view,
-                    search_type = my.search_type,
-                    search_key = my.search_key,
-                    pipeline_code = my.pipeline_code,
+                    search_type = self.search_type,
+                    search_key = self.search_key,
+                    pipeline_code = self.pipeline_code,
                     selected = selected
             )
             top.add(layout)
@@ -233,7 +251,7 @@ class SObjectDetailWdg(BaseRefreshWdg):
 
         
 
-#James moved title down  to move thumbnail to left
+        #James moved title down  to move thumbnail to left
         from tactic.ui.panel import ThumbWdg2
         thumb_table = DivWdg()
         top.add(thumb_table)
@@ -268,36 +286,75 @@ class SObjectDetailWdg(BaseRefreshWdg):
             thumb.set_sobject(my.sobject)
             search_key = my.sobject.get_search_key()
 
-        gallery_div = DivWdg()
-        top.add( gallery_div )
-        gallery_div.add_class("spt_tile_gallery")
- 
-        thumb_table.add_behavior( {
-            'type': 'click_up',
-            'search_key': search_key,
-            'cbjs_action': '''
-                var top = bvr.src_el.getParent(".spt_sobject_detail_top");
-                var gallery_el = top.getElement(".spt_tile_gallery");
+        panel_wdg = DivWdg()
+        top.add(panel_wdg)
+        panel_wdg.add_class("spt_detail_panel")
+        panel_wdg.add_style("display: inline-block")
+        panel_wdg.add_style("vertical-align: top")
 
-                var class_name = 'tactic.ui.widget.gallery_wdg.GalleryWdg';
-                var kwargs = {
-                    search_key: bvr.search_key,
-                    search_keys: [bvr.search_key],
-                };
-                spt.panel.load(gallery_el, class_name, kwargs);
-            ''' } )
- 
 
-        # prefer to see the original image, then web
-        #thumb.set_option('image_link_order', 'main|web|icon')
-        #thumb.set_option("detail", "false")
-        #thumb.set_option("icon_size", "100%")
 
+
+        show_thumb = self.kwargs.get("show_thumb")
+        if show_thumb not in ['false', False]:
+
+            from tactic.ui.panel import ThumbWdg2
+            thumb_div = DivWdg()
+            panel_wdg.add(thumb_div)
+
+            thumb = ThumbWdg2()
+            thumb_div.add(thumb)
+            thumb_div.add_style("width: 200px")
+            thumb_div.add_style("height: 125px")
+            thumb_div.add_style("padding: 5px")
+            thumb_div.add_style("margin-left: 20px")
+            thumb_div.add_style("margin-top: 20px")
+            thumb_div.add_style("display: inline-block")
+            thumb_div.add_style("vertical-align: top")
+            thumb_div.add_style("overflow-y: hidden")
+            # use a larger version for clearer display
+            #thumb.set_icon_type('web')
+
+
+
+            if self.parent:
+                thumb.set_sobject(self.parent)
+                search_key = self.parent.get_search_key()
+            else:
+                thumb.set_sobject(self.sobject)
+                search_key = self.sobject.get_search_key()
+
+            gallery_div = DivWdg()
+            top.add( gallery_div )
+            gallery_div.add_class("spt_tile_gallery")
+     
+            thumb_div.add_behavior( {
+                'type': 'click_up',
+                'search_key': search_key,
+                'cbjs_action': '''
+                    var top = bvr.src_el.getParent(".spt_sobject_detail_top");
+                    var gallery_el = top.getElement(".spt_tile_gallery");
+
+                    var class_name = 'tactic.ui.widget.gallery_wdg.GalleryWdg';
+                    var kwargs = {
+                        search_key: bvr.search_key,
+                        search_keys: [bvr.search_key],
+                    };
+                    spt.panel.load(gallery_el, class_name, kwargs);
+                ''' } )
+     
+
+            # prefer to see the original image, then web
+            #thumb.set_option('image_link_order', 'main|web|icon')
+            #thumb.set_option("detail", "false")
+            #thumb.set_option("icon_size", "100%")
+
+        #top.add("<hr/>")
 
 
         top.add("<br clear='all'/>")
 
-        top.add( my.get_tab_wdg() )
+        top.add( self.get_tab_wdg() )
 
         return top
 
@@ -309,24 +366,24 @@ class SObjectDetailWdg(BaseRefreshWdg):
 
 
 
-    def get_tab_wdg(my):
+    def get_tab_wdg(self):
 
         div = DivWdg()
 
 
         # get the process
-        if my.parent:
-            process = my.sobject.get_value("process")
+        if self.parent:
+            process = self.sobject.get_value("process")
         else:
             process = ''
 
 
         # create a state for tab.  The tab only passes a search key
         # parent key
-        search_key = SearchKey.get_by_sobject(my.sobject)
+        search_key = SearchKey.get_by_sobject(self.sobject)
         parent_key = ""
         if search_key.startswith("sthpw/"):
-            parent = my.sobject.get_parent()
+            parent = self.sobject.get_parent()
             if parent:
                 parent_key = parent.get_search_key()
 
@@ -338,7 +395,7 @@ class SObjectDetailWdg(BaseRefreshWdg):
         WebState.get().push(state)
 
 
-        config_xml = my.get_config_xml()
+        config_xml = self.get_config_xml()
         config = WidgetConfig.get(view="tab", xml=config_xml)
 
 
@@ -348,7 +405,7 @@ class SObjectDetailWdg(BaseRefreshWdg):
             custom_view = "tab_config"
         search = Search("config/widget_config")
         search.add_filter("category", "TabWdg")
-        search.add_filter("search_type", my.search_type)
+        search.add_filter("search_type", self.search_type)
         search.add_filter("view", custom_view)
         custom_config_sobj = search.get_sobject()
         if custom_config_sobj:
@@ -356,9 +413,9 @@ class SObjectDetailWdg(BaseRefreshWdg):
             custom_config = WidgetConfig.get(view=custom_view, xml=custom_config_xml)
             config = WidgetConfigView(search_type='TabWdg', view=custom_view, configs=[custom_config, config])
 
-        selected = my.kwargs.get("selected")
+        selected = self.kwargs.get("selected")
 
-        #menu = my.get_extra_menu()
+        #menu = self.get_extra_menu()
         #tab = TabWdg(config=config, state=state, extra_menu=menu)
         tab = TabWdg(config=config, state=state, show_add=False, show_remove=False, tab_offset=10, selected=selected )
         tab.add_style("margin: 0px -1px -1px -1px")
@@ -372,7 +429,7 @@ class SObjectDetailWdg(BaseRefreshWdg):
 
 
 
-    def get_extra_menu(my):
+    def get_extra_menu(self):
 
         menu = Menu(width=180)
         menu.set_allow_icons(False)
@@ -402,17 +459,17 @@ class SObjectDetailWdg(BaseRefreshWdg):
         return menu
 
 
-    def get_default_tabs(my):
+    def get_default_tabs(self):
         tabs = ["info", "tasks","revisions","attachments","snapshots","checkin","edit"]
         return tabs
 
 
 
-    def get_config_xml(my):
-        if my.kwargs.get("use_parent") in [True, 'true']:
-            search_key = my.sobject.get_search_key()
+    def get_config_xml(self):
+        if self.kwargs.get("use_parent") in [True, 'true']:
+            search_key = self.sobject.get_search_key()
         else:
-            search_key = my.kwargs.get("search_key")
+            search_key = self.kwargs.get("search_key")
 
             # convert to code=XYZ format
 
@@ -420,20 +477,20 @@ class SObjectDetailWdg(BaseRefreshWdg):
             search_key = sobject.get_search_key()
         search_key = search_key.replace("&", "&amp;")
 
-        title = my.search_type.split("/")[-1].title()
+        title = self.search_type.split("/")[-1].title()
 
-        detail_view = my.kwargs.get("detail_view")
+        detail_view = self.kwargs.get("detail_view")
         if not detail_view:
             detail_view = "table"
 
         show_default_elements = True
-        if my.kwargs.get("show_default_elements") in [False, 'False', 'false']:
+        if self.kwargs.get("show_default_elements") in [False, 'False', 'false']:
             show_default_elements = False
 
         values = {
                 'search_key': search_key,
-                'pipeline_code': my.pipeline_code,
-                'search_type': my.search_type,
+                'pipeline_code': self.pipeline_code,
+                'search_type': self.search_type,
                 'detail_view': detail_view,
                 'show_default_elements': show_default_elements
         }
@@ -445,20 +502,20 @@ class SObjectDetailWdg(BaseRefreshWdg):
         <tab>''')
 
 
-        search_type_obj = SearchType.get(my.search_type)
+        search_type_obj = SearchType.get(self.search_type)
         settings = search_type_obj.get_value("settings", no_exception=True)
 
 
-        tabs = my.kwargs.get("tab_element_names")
+        tabs = self.kwargs.get("tab_element_names")
 
-        tab_view = my.kwargs.get("tab_view")
+        tab_view = self.kwargs.get("tab_view")
         if not tab_view:
             tab_view = "tab_element_names"
 
 
         config_search = Search("config/widget_config")
         config_search.add_filter("view", tab_view)
-        config_search.add_filter("search_type", my.search_type)
+        config_search.add_filter("search_type", self.search_type)
         config_search.add_order_by("timestamp desc")
         configs = config_search.get_sobjects()
 
@@ -470,15 +527,15 @@ class SObjectDetailWdg(BaseRefreshWdg):
         elif config:
             tabs = config.get_element_names()
         else:
-            tabs = my.get_default_tabs()
+            tabs = self.get_default_tabs()
         
         if len(tabs) == 0:
             tabs.insert(0, "info")
 
-        #if my.sobject.get_value("pipeline_code", no_exception=True):
+        #if self.sobject.get_value("pipeline_code", no_exception=True):
         #    tabs.append("pipeline")
-        #    values['pipeline_code'] = my.sobject.get_value("pipeline_code")
-        if my.sobject.get_value("_is_collection", no_exception=True):
+        #    values['pipeline_code'] = self.sobject.get_value("pipeline_code")
+        if self.sobject.get_value("_is_collection", no_exception=True):
             tabs.append("collection")
 
             if "file_detail" in tabs:
@@ -726,7 +783,7 @@ class SObjectDetailWdg(BaseRefreshWdg):
                 tab_values = {}
                 tab_values['title'] = title
                 tab_values['search_type'] = tab
-                tab_values['search_key'] = my.search_key
+                tab_values['search_key'] = self.search_key
 
                 config_xml.append('''
                 <element name="%(search_type)s" title="%(title)s">
@@ -795,7 +852,7 @@ class SObjectDetailWdg(BaseRefreshWdg):
 
 
 
-        my.append_to_config(config_xml)
+        self.append_to_config(config_xml)
 
         config_xml.append('''
         </tab>
@@ -809,32 +866,32 @@ class SObjectDetailWdg(BaseRefreshWdg):
         return config_xml
 
 
-    def append_to_config(my, config_xml):
+    def append_to_config(self, config_xml):
         return
 
 
-    def get_sobject(my):
+    def get_sobject(self):
 
-        search_key = my.kwargs.get("search_key")
-        child_key = my.kwargs.get("child_key")
+        search_key = self.kwargs.get("search_key")
+        child_key = self.kwargs.get("child_key")
 
         if child_key:
             child = Search.get_by_search_key(child_key)
             sobject = child.get_parent()
-            my.kwargs["search_key"] = sobject.get_search_key()
+            self.kwargs["search_key"] = sobject.get_search_key()
         else:
             sobject = Search.get_by_search_key(search_key)
 
-        use_parent = my.kwargs.get("use_parent")
+        use_parent = self.kwargs.get("use_parent")
         if use_parent in [True, 'true']:
             sobject = sobject.get_parent()
 
-        my.parent = None
+        self.parent = None
 
         return sobject
 
 
-    def get_sobject_info(my):
+    def get_sobject_info(self):
         titles = ['Code', 'Name', 'Description']
         exprs = []
         exprs.append( "@GET(.code)")
@@ -843,7 +900,7 @@ class SObjectDetailWdg(BaseRefreshWdg):
         return titles, exprs
 
 
-    def get_sobject_info_wdg(my):
+    def get_sobject_info_wdg(self):
         div = DivWdg()
         return div
 
@@ -852,13 +909,13 @@ class SObjectDetailWdg(BaseRefreshWdg):
 
         attr_table.add_color("color", "color")
 
-        sobject = my.get_sobject()
+        sobject = self.get_sobject()
 
-        titles, exprs = my.get_sobject_info()
+        titles, exprs = self.get_sobject_info()
         for title, expr in zip(titles, exprs):
             try:
                 value = Search.eval(expr, sobject)
-            except Exception, e:
+            except Exception as e:
                 print "WARNING: ", e.message
                 continue
 
@@ -877,7 +934,7 @@ class SObjectDetailWdg(BaseRefreshWdg):
         return div
 
 
-    def get_sobject_detail_wdg(my):
+    def get_sobject_detail_wdg(self):
         div = DivWdg()
         #div.add_style("float: right")
         div.add_style("width: 100%")
@@ -910,8 +967,8 @@ class SObjectDetailWdg(BaseRefreshWdg):
         ignore = ["preview", "notes", "files"]
 
         from tactic.ui.panel.edit_layout_wdg import EditLayoutWdg
-        if my.parent:
-            sobject = my.get_sobject()
+        if self.parent:
+            sobject = self.get_sobject()
             search_type = sobject.get_search_type()
             search_key = sobject.get_search_key()
 
@@ -926,19 +983,19 @@ class SObjectDetailWdg(BaseRefreshWdg):
 
         else:
 
-            view = my.kwargs.get("detail_view")
+            view = self.kwargs.get("detail_view")
             if not view:
                 view = "edit"
 
             element_names = ['code', 'name','description']
 
             # Make element_names empty if user desides to hide the default elements
-            show_default_elements = my.kwargs.get("show_default_elements")
+            show_default_elements = self.kwargs.get("show_default_elements")
             
             if show_default_elements in ['false', 'False', False]:
                 element_names = []
 
-            config = WidgetConfigView.get_by_search_type(search_type=my.full_search_type, view=view)
+            config = WidgetConfigView.get_by_search_type(search_type=self.full_search_type, view=view)
             config_element_names = config.get_element_names()
             for x in config_element_names:
                 if x in ignore:
@@ -948,7 +1005,7 @@ class SObjectDetailWdg(BaseRefreshWdg):
 
 
 
-            edit = EditLayoutWdg(search_type=my.full_search_type, mode='view', view="detail", search_key=my.search_key, width=400, title=' ', ignore=ignore, element_names=element_names)
+            edit = EditLayoutWdg(search_type=self.full_search_type, mode='view', view="detail", search_key=self.search_key, width=400, title=' ', ignore=ignore, element_names=element_names)
             edit_div.add(edit)
 
 
@@ -958,36 +1015,36 @@ class SObjectDetailWdg(BaseRefreshWdg):
 
 class SObjectDetailInfoWdg(SObjectDetailWdg):
 
-    def get_display(my):
+    def get_display(self):
 
-        search_key = my.kwargs.get("search_key")
-        my.sobject = Search.get_by_search_key(search_key)
-        if my.sobject.get_base_search_type() == "sthpw/task":
-            my.parent = my.sobject
+        search_key = self.kwargs.get("search_key")
+        self.sobject = Search.get_by_search_key(search_key)
+        if self.sobject.get_base_search_type() == "sthpw/task":
+            self.parent = self.sobject
         else:
-            my.parent = None
+            self.parent = None
 
 
-        top = my.top
+        top = self.top
 
-        if not my.sobject:
+        if not self.sobject:
             top.add("No SObject defined for this widget")
             return top
 
-        if my.parent:
-            my.search_type = my.parent.get_base_search_type()
-            my.search_key = SearchKey.get_by_sobject(my.parent)
-            top.add_attr("spt_parent_key", my.search_key) 
-            my.pipeline_code = my.parent.get_value("pipeline_code", no_exception=True)
-            my.full_search_type = my.parent.get_search_type()
+        if self.parent:
+            self.search_type = self.parent.get_base_search_type()
+            self.search_key = SearchKey.get_by_sobject(self.parent)
+            top.add_attr("spt_parent_key", self.search_key) 
+            self.pipeline_code = self.parent.get_value("pipeline_code", no_exception=True)
+            self.full_search_type = self.parent.get_search_type()
         else:
-            my.pipeline_code = my.sobject.get_value("pipeline_code", no_exception=True)
-            my.search_type = my.sobject.get_base_search_type()
-            my.search_key = SearchKey.get_by_sobject(my.sobject)
-            my.full_search_type = my.sobject.get_search_type()
+            self.pipeline_code = self.sobject.get_value("pipeline_code", no_exception=True)
+            self.search_type = self.sobject.get_base_search_type()
+            self.search_key = SearchKey.get_by_sobject(self.sobject)
+            self.full_search_type = self.sobject.get_search_type()
 
-        if not my.pipeline_code:
-            my.pipeline_code = 'default'
+        if not self.pipeline_code:
+            self.pipeline_code = 'default'
 
 
         table = Table()
@@ -1000,7 +1057,7 @@ class SObjectDetailInfoWdg(SObjectDetailWdg):
         td.add_style("padding: 20px")
         td.add_style("width: 50%")
 
-        #sobject_info_wdg = my.get_sobject_info_wdg()
+        #sobject_info_wdg = self.get_sobject_info_wdg()
         #sobject_info_wdg.add_style("width: 100%")
         #td.add(sobject_info_wdg)
 
@@ -1038,10 +1095,10 @@ class SObjectDetailInfoWdg(SObjectDetailWdg):
 
 
 
-        if my.search_type == 'sthpw/task' and not my.parent:
+        if self.search_type == 'sthpw/task' and not self.parent:
             pass
         else:
-            sobject_info_wdg = my.get_sobject_detail_wdg()
+            sobject_info_wdg = self.get_sobject_detail_wdg()
             td.add(sobject_info_wdg)
             td.add_style("vertical-align: top")
             td.add_style("overflow: hidden")
@@ -1082,7 +1139,7 @@ class SObjectDetailInfoWdg(SObjectDetailWdg):
 
 
         # write out all the notes totals
-        search_type = my.sobject.get_base_search_type()
+        search_type = self.sobject.get_base_search_type()
 
         parts = search_type.split("/")
 
@@ -1098,7 +1155,7 @@ class SObjectDetailInfoWdg(SObjectDetailWdg):
 
         # hard code some built in stypes
         if search_type in ['sthpw/snapshot']:
-            parent = my.sobject.get_parent()
+            parent = self.sobject.get_parent()
             related_types = [parent.get_base_search_type()]
 
         elif search_type.startswith("sthpw/"):
@@ -1114,7 +1171,7 @@ class SObjectDetailInfoWdg(SObjectDetailWdg):
             else:
                 from pyasm.biz import Schema
                 schema = Schema.get()
-                related_types = schema.get_related_search_types(my.sobject.get_base_search_type())
+                related_types = schema.get_related_search_types(self.sobject.get_base_search_type())
                 related_types = list(set(related_types))
         """
 
@@ -1122,10 +1179,10 @@ class SObjectDetailInfoWdg(SObjectDetailWdg):
 
         sobjects = []
         for related_type in related_types:
-            related_sobjects = Search.eval("@SOBJECT(%s)" % related_type, my.sobject)
+            related_sobjects = Search.eval("@SOBJECT(%s)" % related_type, self.sobject)
             sobjects.extend(related_sobjects)
 
-        sobjects.insert(0, my.sobject)
+        sobjects.insert(0, self.sobject)
 
         from tactic.ui.widget.discussion_wdg import DiscussionWdg
         for sobject in sobjects:
@@ -1144,7 +1201,7 @@ class SObjectDetailInfoWdg(SObjectDetailWdg):
 
             discussion_wdg = DiscussionWdg(search_key=search_key,
                     context_hidden=False, show_note_expand=False,
-                    show_task_process=my.show_task_process)
+                    show_task_process=self.show_task_process)
             
             notes_div.add(discussion_wdg)
             #menu = discussion_wdg.get_menu_wdg(notes_div)
@@ -1167,15 +1224,15 @@ class SObjectDetailInfoWdg(SObjectDetailWdg):
 
 class RelatedSObjectWdg(BaseRefreshWdg):
 
-    def get_display(my):
+    def get_display(self):
 
-        top = my.top
+        top = self.top
         top.add_class("spt_related_top")
 
         from pyasm.biz import Schema
         schema = Schema.get()
 
-        search_key = my.kwargs.get("search_key")
+        search_key = self.kwargs.get("search_key")
         sobject = Search.get_by_search_key(search_key)
 
         search_type = sobject.get_base_search_type()
@@ -1262,7 +1319,7 @@ class RelatedSObjectWdg(BaseRefreshWdg):
 
 class SnapshotDetailWdg(SObjectDetailWdg):
 
-    def get_title_wdg(my):
+    def get_title_wdg(self):
 
         title_wdg = DivWdg()
         title_wdg.add_style("margin: 20px")
@@ -1270,22 +1327,22 @@ class SnapshotDetailWdg(SObjectDetailWdg):
         title_wdg.add_style("opacity: 0.7")
 
 
-        my.sobject = my.get_sobject()
+        self.sobject = self.get_sobject()
 
-        parent = my.sobject.get_parent()
+        parent = self.sobject.get_parent()
 
         snapshot_div = DivWdg()
         title_wdg.add(snapshot_div)
         snapshot_div.add_style("font-size: 25px")
-        snapshot_div.add(my.sobject.get_code())
+        snapshot_div.add(self.sobject.get_code())
 
 
  
-        context = my.sobject.get_value("context", no_exception=True)
-        process = my.sobject.get_value("process", no_exception=True)
-        version = my.sobject.get_value("version", no_exception=True)
-        login = my.sobject.get_value("login", no_exception=True)
-        timestamp = my.sobject.get_datetime_value("timestamp")
+        context = self.sobject.get_value("context", no_exception=True)
+        process = self.sobject.get_value("process", no_exception=True)
+        version = self.sobject.get_value("version", no_exception=True)
+        login = self.sobject.get_value("login", no_exception=True)
+        timestamp = self.sobject.get_datetime_value("timestamp")
         timestamp = SPTDate.convert_to_local(timestamp)
         time_ago = SPTDate.get_time_ago(timestamp)
 
@@ -1315,7 +1372,7 @@ class SnapshotDetailWdg(SObjectDetailWdg):
         version_wdg.add_style("margin: 5px 0px")
 
 
-        lib_path = my.sobject.get_lib_path_by_type()
+        lib_path = self.sobject.get_lib_path_by_type()
         lib_path_info = Common.get_dir_info(lib_path)
         if lib_path_info.get("file_type") == "file":
             size = lib_path_info.get("size")
@@ -1347,8 +1404,8 @@ class SnapshotDetailWdg(SObjectDetailWdg):
             lib_dir_wdg = DivWdg()
             title_wdg.add(lib_dir_wdg)
 
-            lib_dir = my.sobject.get_lib_dir()
-            client_lib_dir = my.sobject.get_client_lib_dir()
+            lib_dir = self.sobject.get_lib_dir()
+            client_lib_dir = self.sobject.get_client_lib_dir()
 
 
             lib_dir_wdg.add_style("margin: 5px 0px")
@@ -1379,24 +1436,24 @@ class SnapshotDetailWdg(SObjectDetailWdg):
         return title_wdg
 
 
-    def get_default_tabs(my):
+    def get_default_tabs(self):
         #tabs = ["checkin_history"]
         tabs = []
         return tabs
 
 
-    def append_to_config(my, config_xml):
+    def append_to_config(self, config_xml):
 
         values = {}
 
-        process = my.sobject.get_value("process")
-        context = my.sobject.get_value("context")
-        parent = my.sobject.get_parent()
+        process = self.sobject.get_value("process")
+        context = self.sobject.get_value("context")
+        parent = self.sobject.get_parent()
         #values['search_key'] = parent.get_search_key()
         values['search_key'] = ''
         values['process'] = process
 
-        values['expression'] = "@SEARCH(sthpw/snapshot['context','%s']['search_code','%s']['search_type','%s'])" % (context, my.sobject.get("search_code"), my.sobject.get("search_type"))
+        values['expression'] = "@SEARCH(sthpw/snapshot['context','%s']['search_code','%s']['search_type','%s'])" % (context, self.sobject.get("search_code"), self.sobject.get("search_type"))
 
         config_xml.append('''
         <element name="snapshot_history" title="Check-in History">
@@ -1425,7 +1482,7 @@ class SnapshotDetailWdg(SObjectDetailWdg):
         ''' % values)
 
 
-        values['expression2'] = "@SEARCH(sthpw/snapshot['process','%s/review']['search_code','%s']['search_type','%s'])" % (process, my.sobject.get("search_code"), my.sobject.get("search_type"))
+        values['expression2'] = "@SEARCH(sthpw/snapshot['process','%s/review']['search_code','%s']['search_type','%s'])" % (process, self.sobject.get("search_code"), self.sobject.get("search_type"))
 
 
         config_xml.append('''
@@ -1462,7 +1519,7 @@ class SnapshotDetailWdg(SObjectDetailWdg):
 class TaskDetailWdg(SObjectDetailWdg):
 
 
-    def get_title_wdg(my):
+    def get_title_wdg(self):
 
         title = DivWdg()
 
@@ -1471,19 +1528,19 @@ class TaskDetailWdg(SObjectDetailWdg):
         title.add_style("font-weight: bold")
         title.add_style("font-size: 1.4em")
 
-        if not my.parent:
+        if not self.parent:
             title.add("Parent not found")
             return title
 
-        code = my.parent.get_value("code", no_exception=True)
-        name = my.parent.get_value("name", no_exception=True)
+        code = self.parent.get_value("code", no_exception=True)
+        name = self.parent.get_value("name", no_exception=True)
 
-        process = my.sobject.get("process")
-        task_code = my.sobject.get("code")
-        status = my.sobject.get("status")
-        description = my.sobject.get("description")
-        start_date = my.sobject.get("bid_start_date")
-        end_date = my.sobject.get("bid_end_date")
+        process = self.sobject.get("process")
+        task_code = self.sobject.get("code")
+        status = self.sobject.get("status")
+        description = self.sobject.get("description")
+        start_date = self.sobject.get("bid_start_date")
+        end_date = self.sobject.get("bid_end_date")
 
         bgcolor = title.get_color("background")
         title.add("<span style='font-size: 1.2em; padding: 4px; margin: 0px 20px 0px 0px;'>%s</span>  Task <i>(%s)</i>" % (process, code))
@@ -1493,7 +1550,7 @@ class TaskDetailWdg(SObjectDetailWdg):
         #notes_div = DivWdg()
         #title.add(notes_div)
         #from tactic.ui.widget.discussion_wdg import DiscussionWdg
-        #discussion_wdg = DiscussionWdg(search_key=my.parent.get_search_key(), process=process, context_hidden=True, show_note_expand=True)
+        #discussion_wdg = DiscussionWdg(search_key=self.parent.get_search_key(), process=process, context_hidden=True, show_note_expand=True)
         #notes_div.add(discussion_wdg)
 
         title.add("<hr/>")
@@ -1529,14 +1586,14 @@ class TaskDetailWdg(SObjectDetailWdg):
 
 
 
-    def get_sobject(my):
-        search_key = my.kwargs.get("search_key")
-        my.sobject = Search.get_by_search_key(search_key)
-        my.parent = my.sobject.get_parent()
-        return my.sobject
+    def get_sobject(self):
+        search_key = self.kwargs.get("search_key")
+        self.sobject = Search.get_by_search_key(search_key)
+        self.parent = self.sobject.get_parent()
+        return self.sobject
 
 
-    def get_sobject_info(my):
+    def get_sobject_info(self):
 
         titles = ['Description']
         exprs = []
@@ -1546,16 +1603,16 @@ class TaskDetailWdg(SObjectDetailWdg):
 
  
 
-    def get_config_xml(my):
+    def get_config_xml(self):
 
-        process = my.sobject.get_value("process")
-        context = my.sobject.get_value("context")
+        process = self.sobject.get_value("process")
+        context = self.sobject.get_value("context")
         process_title = "Process - %s" % (process)
         process_name = "process_%s" % process
         parent_key = ''
-        if my.parent:
-            parent_key = SearchKey.get_by_sobject(my.parent).replace("&","&amp;")
-        search_key = SearchKey.get_by_sobject(my.sobject).replace("&","&amp;")
+        if self.parent:
+            parent_key = SearchKey.get_by_sobject(self.parent).replace("&","&amp;")
+        search_key = SearchKey.get_by_sobject(self.sobject).replace("&","&amp;")
 
         config_xml = []
 
@@ -1564,8 +1621,8 @@ class TaskDetailWdg(SObjectDetailWdg):
         <tab>''' )
 
 
-        if my.parent:
-            parent_type = my.parent.get_base_search_type()
+        if self.parent:
+            parent_type = self.parent.get_base_search_type()
             config_xml.append( '''
             <element name="info" title="Info">
               <display class='tactic.ui.panel.CustomLayoutWdg'>
@@ -1625,11 +1682,11 @@ class TaskDetailWdg(SObjectDetailWdg):
 
 
         #from tactic.ui.panel.edit_layout_wdg import EditLayoutWdg
-        #edit = EditLayoutWdg(search_type=my.full_search_type, mode='view', view="detail", search_key=my.search_key, width=400, title=' ', ignore=ignore, element_names=element_names)
+        #edit = EditLayoutWdg(search_type=self.full_search_type, mode='view', view="detail", search_key=self.search_key, width=400, title=' ', ignore=ignore, element_names=element_names)
            
 
         
-        if not my.parent:
+        if not self.parent:
             config_xml.append( '''
             </tab>
             </config>
@@ -1638,8 +1695,8 @@ class TaskDetailWdg(SObjectDetailWdg):
             config_xml = "".join(config_xml)
             return config_xml
 
-        values = my.parent.get_data()
-        values['search_key'] = my.parent.get_search_key().replace("&", "&amp;")
+        values = self.parent.get_data()
+        values['search_key'] = self.parent.get_search_key().replace("&", "&amp;")
         values['process'] = process
 
 
@@ -1677,14 +1734,14 @@ class TaskDetailWdg(SObjectDetailWdg):
 
 
 
-        display_options = my.kwargs
+        display_options = self.kwargs
         options_list = []
         for key, value in display_options.items():
             if key in ['search_key','process', 'parent_key','checkin_ui_options','checkin_script_path','checkin_script','checkin_relative_dir']:
                 continue
             options_list.append('<%(key)s>%(value)s</%(key)s>'%({'key':key, 'value': value}))
 
-        display_options = my.kwargs
+        display_options = self.kwargs
         options_list = []
         for key, value in display_options.items():
             if key in ['search_key','process','show_versionless_folder']:
@@ -1737,31 +1794,31 @@ class TaskDetailWdg(SObjectDetailWdg):
 __all__.append("SObjectTaskStatusDetailWdg")
 class SObjectTaskStatusDetailWdg(BaseRefreshWdg):
 
-    def get_display(my):
-        top = my.top
+    def get_display(self):
+        top = self.top
 
         top.add_class("spt_tasks_status_detail_top")
 
-        search_key = my.kwargs.get("search_key")
+        search_key = self.kwargs.get("search_key")
 
         from tactic.ui.table import TaskElementWdg
         from pyasm.search import Search
-        my.sobject = Search.get_by_search_key(search_key)
+        self.sobject = Search.get_by_search_key(search_key)
 
 
-        if my.sobject.get_base_search_type() == "sthpw/task":
-            my.parent = my.sobject.get_parent()
+        if self.sobject.get_base_search_type() == "sthpw/task":
+            self.parent = self.sobject.get_parent()
         else:
-            my.parent = None
+            self.parent = None
 
-        if my.parent:
-            code = my.parent.get_value("code", no_exception=True)
-            name = my.parent.get_value("name", no_exception=True)
-            search_type_obj = my.parent.get_search_type_obj()
+        if self.parent:
+            code = self.parent.get_value("code", no_exception=True)
+            name = self.parent.get_value("name", no_exception=True)
+            search_type_obj = self.parent.get_search_type_obj()
         else:
-            code = my.sobject.get_value("code", no_exception=True)
-            name = my.sobject.get_value("name", no_exception=True)
-            search_type_obj = my.sobject.get_search_type_obj()
+            code = self.sobject.get_value("code", no_exception=True)
+            name = self.sobject.get_value("name", no_exception=True)
+            search_type_obj = self.sobject.get_search_type_obj()
 
 
 
@@ -1774,13 +1831,13 @@ class SObjectTaskStatusDetailWdg(BaseRefreshWdg):
         from tactic.ui.widget import ActionButtonWdg
         from tactic.ui.panel import TableLayoutWdg
 
-        search_key = my.sobject.get_search_key()
+        search_key = self.sobject.get_search_key()
 
 
 
         thumb = ThumbWdg2()
         title.add(thumb)
-        thumb.set_sobject(my.sobject)
+        thumb.set_sobject(self.sobject)
         thumb.add_style("width: px")
         thumb.add_style("float: left")
         thumb.add_style("margin: 0px 15px")
@@ -1797,9 +1854,9 @@ class SObjectTaskStatusDetailWdg(BaseRefreshWdg):
 
 
 
-        code = my.sobject.get("code")
-        name = my.sobject.get("name")
-        description = my.sobject.get("description")
+        code = self.sobject.get("code")
+        name = self.sobject.get("name")
+        description = self.sobject.get("description")
 
         info_div = DivWdg()
         title.add(info_div)
@@ -1895,10 +1952,10 @@ class SObjectTaskStatusDetailWdg(BaseRefreshWdg):
         """
 
         element = TableLayoutWdg(
-                search_type=my.sobject.get_base_search_type(),
+                search_type=self.sobject.get_base_search_type(),
                 view="test",
                 show_shelf="false",
-                search_key=my.sobject.get_search_key(),
+                search_key=self.sobject.get_search_key(),
                 element_names=['task_pipeline_vertical'],
                 show_select="false",
                 show_search_limit="false",
@@ -1913,7 +1970,7 @@ class SObjectTaskStatusDetailWdg(BaseRefreshWdg):
         element = TableLayoutWdg(
                 search_type="sthpw/task",
                 show_shelf=False,
-                parent_key=my.sobject.get_search_key(),
+                parent_key=self.sobject.get_search_key(),
                 element_names=['process','description','status','assigned','priority'],
                 show_select=False,
                 init_load_num=-1,
@@ -1934,20 +1991,19 @@ __all__.append("TaskDetailPipelineWdg")
 class TaskDetailPipelineWrapperWdg(BaseRefreshWdg):
 
 
-    def get_display(my):
-        search_key = my.kwargs.get("search_key")
-        my.sobject = Search.get_by_search_key(search_key)
-        if my.sobject:
-            my.parent = my.sobject.get_parent()
+    def get_display(self):
+        search_key = self.kwargs.get("search_key")
+        self.sobject = Search.get_by_search_key(search_key)
+        if self.sobject:
+            self.parent = self.sobject.get_parent()
         else:
-            my.parent = None
+            self.parent = None
 
-        pipeline_code = my.kwargs.get("pipeline")
+        pipeline_code = self.kwargs.get("pipeline")
 
-        top = my.top
-        my.set_as_panel(top)
+        top = self.top
+        self.set_as_panel(top)
         top.add_class("spt_pipeline_wrapper")
-        top.add_color("background", "background")
 
         pipeline = Pipeline.get_by_code(pipeline_code)
         if pipeline:
@@ -1964,24 +2020,24 @@ class TaskDetailPipelineWrapperWdg(BaseRefreshWdg):
 
 
         # it's ok to not have a parent unless it's a task, then just exit early
-        if not my.parent and my.sobject and my.sobject.get_base_search_type() == 'sthpw/task':
+        if not self.parent and self.sobject and self.sobject.get_base_search_type() == 'sthpw/task':
             top.add('Parent of this task cannot be found.')
             return top
 
 
-        top.add(my.get_pipeline_wdg(pipeline_code) )
+        top.add(self.get_pipeline_wdg(pipeline_code) )
 
 
         return top
 
 
-    def get_pipeline_wdg(my, pipeline_code):
+    def get_pipeline_wdg(self, pipeline_code):
         div = DivWdg()
 
-        height = my.kwargs.get("height") or 500
-        show_title = my.kwargs.get("show_title")
+        height = self.kwargs.get("height") or 500
+        show_title = self.kwargs.get("show_title")
 
-        show_title = my.kwargs.get("show_title")
+        show_title = self.kwargs.get("show_title")
         if show_title not in [False, 'false']:
             title = DivWdg()
             title.add_color("background", "background3", -5)
@@ -2012,12 +2068,12 @@ class TaskDetailPipelineWrapperWdg(BaseRefreshWdg):
         from pyasm.biz import Task
         process = ''
         
-        if my.parent:
-            tasks = Task.get_by_sobject(my.parent)
-            if my.sobject.has_value("process"):
-                process = my.sobject.get_value("process")
-        elif my.sobject:
-            tasks = Task.get_by_sobject(my.sobject)
+        if self.parent:
+            tasks = Task.get_by_sobject(self.parent)
+            if self.sobject.has_value("process"):
+                process = self.sobject.get_value("process")
+        elif self.sobject:
+            tasks = Task.get_by_sobject(self.sobject)
         else:
             tasks = []
 
@@ -2083,17 +2139,13 @@ class TaskDetailPipelineWrapperWdg(BaseRefreshWdg):
             } )
 
 
-        #div.add_style("padding: 10px")
-        div.add_border()
-
-
         return div
 
 
 
 class TaskDetailPipelineWdg(PipelineCanvasWdg):
 
-    def get_node_context_menu(my):
+    def get_node_context_menu(self):
 
         menu = Menu(width=180)
         menu.set_allow_icons(False)
@@ -2140,26 +2192,26 @@ class TaskDetailPipelineWdg(PipelineCanvasWdg):
 class SObjectSingleProcessDetailWdg(BaseRefreshWdg):
     '''Shows the task, snapshot and notes information for an sobject'''
 
-    def get_sobject(my):
-        search_key = my.kwargs.get("search_key")
-        my.sobject = Search.get_by_search_key(search_key)
-        my.parent = None
-        if my.sobject:
-            my.parent = my.sobject.get_parent()
-        return my.sobject
+    def get_sobject(self):
+        search_key = self.kwargs.get("search_key")
+        self.sobject = Search.get_by_search_key(search_key)
+        self.parent = None
+        if self.sobject:
+            self.parent = self.sobject.get_parent()
+        return self.sobject
 
 
-    def get_display(my):
+    def get_display(self):
         top = DivWdg()
 
-        sobject = my.get_sobject()
+        sobject = self.get_sobject()
         if not sobject:
             return top
-        process = my.kwargs.get("process")
+        process = self.kwargs.get("process")
 
         #from tactic.ui.table import TaskElementWdg
         #task_wdg = TaskElementWdg()
-        #task_wdg.set_sobject(my.sobject)
+        #task_wdg.set_sobject(self.sobject)
         #top.add(task_wdg)
 
         search = Search('sthpw/task')
@@ -2264,29 +2316,29 @@ class SObjectSingleProcessDetailWdg(BaseRefreshWdg):
 __all__.append("TaskDetailPanelWdg")
 class TaskDetailPanelWdg(BaseRefreshWdg):
 
-    def get_display(my):
-        top = my.top
+    def get_display(self):
+        top = self.top
 
         top.add_class("spt_tasks_status_detail_top")
 
-        search_key = my.kwargs.get("search_key")
+        search_key = self.kwargs.get("search_key")
 
         from tactic.ui.table import TaskElementWdg
         from pyasm.search import Search
-        my.sobject = Search.get_by_search_key(search_key)
+        self.sobject = Search.get_by_search_key(search_key)
 
 
-        if my.sobject.get_base_search_type() == "sthpw/task":
-            my.parent = my.sobject.get_parent()
+        if self.sobject.get_base_search_type() == "sthpw/task":
+            self.parent = self.sobject.get_parent()
         else:
-            my.parent = None
+            self.parent = None
 
-        if my.parent:
-            code = my.parent.get_value("code", no_exception=True)
-            search_type_obj = my.parent.get_search_type_obj()
+        if self.parent:
+            code = self.parent.get_value("code", no_exception=True)
+            search_type_obj = self.parent.get_search_type_obj()
         else:
-            code = my.sobject.get_value("code", no_exception=True)
-            search_type_obj = my.sobject.get_search_type_obj()
+            code = self.sobject.get_value("code", no_exception=True)
+            search_type_obj = self.sobject.get_search_type_obj()
 
 
 
@@ -2299,15 +2351,15 @@ class TaskDetailPanelWdg(BaseRefreshWdg):
         from tactic.ui.widget import ActionButtonWdg
         from tactic.ui.panel import TableLayoutWdg
 
-        search_key = my.sobject.get_search_key()
+        search_key = self.sobject.get_search_key()
 
 
         thumb = ThumbWdg2()
         title.add(thumb)
-        if my.parent:
-            thumb.set_sobject(my.parent)
+        if self.parent:
+            thumb.set_sobject(self.parent)
         else:
-            thumb.set_sobject(my.sobject)
+            thumb.set_sobject(self.sobject)
         thumb.add_style("width: 80px")
         thumb.add_style("float: left")
         thumb.add_style("margin: 0px 15px")
@@ -2324,8 +2376,8 @@ class TaskDetailPanelWdg(BaseRefreshWdg):
 
 
 
-        code = my.sobject.get("code")
-        description = my.sobject.get("description")
+        code = self.sobject.get("code")
+        description = self.sobject.get("description")
 
         info_div = DivWdg()
         title.add(info_div)
@@ -2381,8 +2433,8 @@ class TaskDetailPanelWdg(BaseRefreshWdg):
         from tactic.ui.panel import EditWdg
 
         element = EditWdg(
-                search_type=my.sobject.get_base_search_type(),
-                search_key=my.sobject.get_search_key(),
+                search_type=self.sobject.get_base_search_type(),
+                search_key=self.sobject.get_search_key(),
                 element_names=['status','days_due','priority'],
                 show_header=False,
                 show_action=False
@@ -2391,10 +2443,10 @@ class TaskDetailPanelWdg(BaseRefreshWdg):
 
 
         element = TableLayoutWdg(
-                search_type=my.sobject.get_base_search_type(),
+                search_type=self.sobject.get_base_search_type(),
                 view="test",
                 show_shelf="false",
-                search_key=my.sobject.get_search_key(),
+                search_key=self.sobject.get_search_key(),
                 element_names=['work_hours'],
                 show_select="false",
                 show_search_limit="false",
@@ -2405,11 +2457,11 @@ class TaskDetailPanelWdg(BaseRefreshWdg):
 
 
         element = TableLayoutWdg(
-                search_type=my.sobject.get_base_search_type(),
+                search_type=self.sobject.get_base_search_type(),
                 use_parent="true",
                 view="test",
                 show_shelf="false",
-                search_key=my.sobject.get_search_key(),
+                search_key=self.sobject.get_search_key(),
                 element_names=['notes'],
                 show_select="false",
                 show_search_limit="false",
@@ -2423,14 +2475,14 @@ class TaskDetailPanelWdg(BaseRefreshWdg):
 
 class SObjectRelatedNotesWdg(BaseRefreshWdg):
 
-    def get_display(my):
-        search_key = my.kwargs.get("search_key")
+    def get_display(self):
+        search_key = self.kwargs.get("search_key")
 
         from pyasm.search import Search
-        my.sobject = Search.get_by_search_key(search_key)
-        my.show_task_process = my.kwargs.get('show_task_process')
+        self.sobject = Search.get_by_search_key(search_key)
+        self.show_task_process = self.kwargs.get('show_task_process')
 
-        top = my.top
+        top = self.top
         td = DivWdg()
         top.add(td)
         td.add_style("text-align: left")
@@ -2451,7 +2503,7 @@ class SObjectRelatedNotesWdg(BaseRefreshWdg):
         td.add("<hr/>")
 
         #write out all the notes totals
-        search_type = my.sobject.get_base_search_type()
+        search_type = self.sobject.get_base_search_type()
 
         parts = search_type.split("/")
 
@@ -2466,10 +2518,10 @@ class SObjectRelatedNotesWdg(BaseRefreshWdg):
 
         sobjects = []
         for related_type in related_types:
-            related_sobjects = Search.eval("@SOBJECT(%s)" % related_type, my.sobject)
+            related_sobjects = Search.eval("@SOBJECT(%s)" % related_type, self.sobject)
             sobjects.extend(related_sobjects)
 
-        sobjects.insert(0, my.sobject)
+        sobjects.insert(0, self.sobject)
 
         from tactic.ui.widget.discussion_wdg import DiscussionWdg
         for sobject in sobjects:
@@ -2488,7 +2540,7 @@ class SObjectRelatedNotesWdg(BaseRefreshWdg):
 
             discussion_wdg = DiscussionWdg(search_key=search_key,
                     context_hidden=False, show_note_expand=False,
-                    show_task_process=my.show_task_process)
+                    show_task_process=self.show_task_process)
 
             notes_div.add(discussion_wdg)
             #menu = discussion_wdg.get_menu_wdg(notes_div)
