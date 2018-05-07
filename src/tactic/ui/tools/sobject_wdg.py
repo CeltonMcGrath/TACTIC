@@ -231,17 +231,9 @@ class SObjectDetailWdg(BaseRefreshWdg):
             top.add(layout)
             return layout
 
+        
 
-
-
-
-        title_wdg = my.get_title_wdg()
-        top.add(title_wdg)
-        title_wdg.add_style("display: inline-block")
-        title_wdg.add_style("vertical-align: top")
-        title_wdg.add_style("width: 500px")
-
-
+#James moved title down  to move thumbnail to left
         from tactic.ui.panel import ThumbWdg2
         thumb_table = DivWdg()
         top.add(thumb_table)
@@ -256,9 +248,16 @@ class SObjectDetailWdg(BaseRefreshWdg):
         thumb_table.add_style("display: inline-block")
         thumb_table.add_style("vertical-align: top")
         thumb_table.add_style("overflow-y: hidden")
-        # use a larger version for clearer display
+         #use a larger version for clearer display
         #thumb.set_icon_type('web')
 
+        #change top order of wdg
+
+        title_wdg = my.get_title_wdg()
+        top.add(title_wdg)
+        title_wdg.add_style("display: inline-block")
+        title_wdg.add_style("vertical-align: top")
+        title_wdg.add_style("width: 500px")
 
         top.add("<hr/>")
 

@@ -328,6 +328,8 @@ class EmailTrigger(Trigger):
             st = 'html'
         else:
             st = 'plain'
+            
+            
         
         msg = MIMEText(message, _subtype=st, _charset=charset)
         ''' 
@@ -358,6 +360,8 @@ class EmailTrigger(Trigger):
             recipients = total_bcc_emails|total_cc_emails|to_emails
         else:
             recipients = total_bcc_emails|total_cc_emails|to_emails|sender
+            #james
+            recipients = total_bcc_emails|total_cc_emails|to_emails
 
         email = EmailTriggerThread(user_email, recipients, "%s" %msg.as_string())
         email.start()

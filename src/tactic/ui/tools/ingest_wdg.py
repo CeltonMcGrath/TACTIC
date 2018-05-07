@@ -459,7 +459,7 @@ class IngestUploadWdg(BaseRefreshWdg):
             update_mode.add_class("spt_update_mode_select")
             update_mode.set_option("values", ["false", "true", "sequence"])
             update_mode.set_option("labels", ["Always insert a new item", "Update duplicate items", "Update groups as sequences"])
-            update_mode.set_option("default", update_mode_option)
+            update_mode.set_option("default", "false")
             update_mode.add_style("margin-top: -3px")
             update_mode.add_style("margin-right: 5px")
             map_div.add(update_mode)
@@ -1276,7 +1276,6 @@ class IngestUploadWdg(BaseRefreshWdg):
         //var category = values.category[0];
 
         var keywords = values["edit|user_keywords"];
-
         if (keywords) {
             keywords = keywords[0];
         }
@@ -1443,12 +1442,21 @@ class IngestUploadWdg(BaseRefreshWdg):
 
             // retrieved the stored file handles
             var files = [];
+            delay = function wait(ms){
+                var start = new Date().getTime();
+                var end = start;
+                while (end<start+ms){
+                    end = new Date().getTime();
+                }
+            }
             for (var i = 0; i < file_els.length; i++) {
                 if (file_els[i].file) {
+                    delay(500)
                     files.push( file_els[i].file );
                 }
                 else {
                     var search_key = file_els[i].getAttribute("spt_search_key");
+                    delay(500)
                     files.push("search_key:"+search_key);
                 }
 

@@ -325,14 +325,12 @@
 <inline_add_item>
     <element name="process" width="100px"/>
     <element name="expand"/>
-    <element name="general_checkin"/>
-    <element name="general_checkin_simple"/>
+    <element name="workflow_checkin"/>
+    <element name="ingest"/>
+    <element name="download"/>
     <element name="description" width="300px"/>
-    <element name="milestone_code"/>
     <element name="status" width="100px"/>
     <element name="assigned" width="100px"/>
-    <element name="supervisor" title="Supervisor"/>
-    <element name="priority" width="50px"/>
     <element name="schedule" width="300px"/>
 </inline_add_item>
 

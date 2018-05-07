@@ -1347,6 +1347,9 @@ class WebLoginWdg(Widget):
         text_wdg = TextWdg("login")
         if override_login:
             text_wdg.add_class("spt_login_textbox")
+            #add class for Okta
+            text_wdg.add_class("tegna_login")
+            text_wdg.set_id("tegna_login")
             text_wdg.add_class("form-control")
 
         else:
@@ -1385,6 +1388,9 @@ class WebLoginWdg(Widget):
         password_wdg = PasswordWdg("password")
         if override_password:
             password_wdg.add_class("spt_login_textbox")
+            #added tegna_password class for Okta
+            password_wdg.add_class("tegna_password")
+            password_wdg.set_id("tegna_password")
             password_wdg.add_class("form-control")
         else:
             password_wdg.add_style("color: black")
@@ -1444,9 +1450,9 @@ class WebLoginWdg(Widget):
         span.add(up)
         span.add(down)
         span.add(HiddenWdg("Submit"))
-            
-        span.add_event("onmouseover", "getElementById('submit_on').style.display='none';getElementById('submit_over').style.display='';")
-        span.add_event("onmouseout", "getElementById('submit_over').style.display='none';getElementById('submit_on').style.display='';")
+           #james 
+        span.add_event("onmouseover", "getElementById('submit_on').style.display='none';getElementById('submit_over').style.display='none';")
+        span.add_event("onmouseout", "getElementById('submit_over').style.display='none';getElementById('submit_on').style.display='none';")
         span.add_event("onclick", "document.form.elements['Submit'].value='Submit';document.form.submit()")
         th = table2.add_header(span)
         th.add_style("text-align: center")
