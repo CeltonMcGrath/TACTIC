@@ -2111,7 +2111,9 @@ class FastTableLayoutWdg(BaseTableLayoutWdg):
             inner_div.add_style("margin-top: 4px")
             inner_div.add_style("margin-bottom: 4px")
 
-            inner_div.add_style("min-height: 35px")
+
+            header_height = "30px"
+            inner_div.add_style("min-height: %s" % header_height)
 
 
 
@@ -2533,7 +2535,7 @@ class FastTableLayoutWdg(BaseTableLayoutWdg):
                 #group_value = sobject.get_value(group_column, no_exception=True)
                 group_value = self._get_simplified_time(group_value)
             if not group_value:
-                group_value = "__NONE__"
+                group_value = "..."
             
             last_value = group_values.get(group_column)
 
@@ -2618,6 +2620,11 @@ class FastTableLayoutWdg(BaseTableLayoutWdg):
         tr.add_class("spt_table_row_item")
         tr.add_class("spt_table_group_row")
 
+
+        if sobject.get_search_key():
+            tr.add_attr("spt_search_key", sobject.get_search_key(use_id=True))
+            tr.add_attr("spt_search_key_v2", sobject.get_search_key())
+
         unique_id = tr.set_unique_id()
 
         if not is_template and self.group_mode in ["top"]:
@@ -2627,6 +2634,7 @@ class FastTableLayoutWdg(BaseTableLayoutWdg):
         if group_value != last_value:
             tr.group_level = i
 
+        tr.set_attr("spt_group_level", i)
 
         title = ""
 
@@ -4030,29 +4038,52 @@ spt.table.remove_hidden_row_from_inside = function(el) {
 
 
 // add rows from search_keys
-spt.table.add_rows = function(row, search_type, level) {
+spt.table.add_rows = function(row, search_type, level, expression, kwargs) {
+
+    if (!row.hasClass("spt_table_row_item") ) {
+        row = row.getParent(".spt_table_row_item");
+    }
+
+    if (!kwargs) {
+        kwargs = {}
+    }
 
     var server = TacticServerStub.get();
 
-    search_key = row.getAttribute("spt_search_key");
+    var search_key = row.getAttribute("spt_search_key");
 
     var kwargs = spt.table.get_refresh_kwargs(row);
 
+    // find the number of tds in the row
+    td_count = row.getChildren().length;
+
     var load_tr = document.createElement("tr");
     var load_td = document.createElement("td");
+    load_td.setAttribute("colspan", td_count);
     load_tr.appendChild(load_td);
-    load_td.setAttribute("colspan", "10");
-    load_td.innerHTML = "Loading ("+search_type+") ...";
+
+
+    var message = kwargs.message;
+    if (!message) {
+        message = "Loading ("+search_type+") ...";
+    }
+
+    load_td.innerHTML = message;
+
+
     load_tr.inject(row, "after");
     load_td.setStyle("padding", "5px");
+
+
+    kwargs['expression'] = expression;
 
 
     // make some adjustments
     kwargs['search_type'] = search_type;
     kwargs['search_key'] = search_key;
     kwargs['level'] = level;
+    kwargs['group_level'] = level;
     delete kwargs['search_keys'];
-
 
     var kw = {
         'args': kwargs,
@@ -4065,15 +4096,16 @@ spt.table.add_rows = function(row, search_type, level) {
 
             var new_rows = dummy.getElements(".spt_table_row");
             // the insert row is not included here any more
-            //new_rows.reverse();
             for (var i = 0; i < new_rows.length; i++) {
                 new_rows[i].inject(row, "after");
                 // remap the parent
                 new_rows[i].setAttribute("spt_parent_key", search_key);
+
                 var parts = search_key.split("?");
                 new_rows[i].setAttribute("spt_parent_type", parts[0]);
 
                 new_rows[i].setAttribute("spt_level", level);
+                new_rows[i].setAttribute("spt_group_level", level);
                 var el = new_rows[i].getElement(".spt_level_listen");
                 if (el) {
                     el.setStyle("margin-left", level*15);
@@ -5673,6 +5705,7 @@ spt.table.get_refresh_kwargs = function(row) {
     var table_top = layout.getParent('.spt_table_top');
     
     var show_select = table_top.getAttribute("spt_show_select");
+    var order_by = table_top.getAttribute("spt_order_by");
 
     var group_elements = spt.table.get_group_elements();
 
@@ -5688,7 +5721,8 @@ spt.table.get_refresh_kwargs = function(row) {
         show_select: show_select,
         element_names: element_names,
         group_elements: group_elements,
-        config_xml: config_xml
+        config_xml: config_xml,
+        order_by: order_by
     }
 
     return kwargs
@@ -6294,6 +6328,9 @@ spt.table.collapse_group = function(group_row) {
 
     // FIXME: is this even needed
     group_row.setAttribute("is_collapse", "true");
+
+
+
 
 }
 

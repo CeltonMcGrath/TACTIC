@@ -1178,6 +1178,8 @@ class PipelineToolCanvasWdg(PipelineCanvasWdg):
 
 
     def get_canvas_behaviors(self):
+
+
         behavior = {
         'type': 'click_up',
         'cbjs_action': '''
@@ -1623,6 +1625,22 @@ class ConnectorInfoWdg(BaseRefreshWdg):
     def get_display(self):
         
         top = self.top
+        
+        pipeline_code = self.kwargs.get("pipeline_code")
+        pipeline = Pipeline.get_by_code(pipeline_code)
+       
+        # Custom connector info wdg
+        pipeline_type = pipeline.get_value("type")
+        if pipeline_type:
+            search = Search("config/widget_config")
+            search.add_filter("category", "workflow_connector")
+            search.add_filter("view", pipeline_type)
+            config = search.get_sobject()
+            if config:
+                handler = config.get_display_widget("info", self.kwargs)
+                top.add(handler)
+                return top
+                
         top.add_class("spt_pipeline_connector_info")
 
         top.add_style("padding: 20px 0px")
@@ -1640,8 +1658,6 @@ class ConnectorInfoWdg(BaseRefreshWdg):
 
         top.add("<br/>")
         
-        pipeline_code = self.kwargs.get("pipeline_code")
-        pipeline = Pipeline.get_by_code(pipeline_code)
 
         from_node = self.kwargs.get("from_node")
         to_node = self.kwargs.get("to_node")
@@ -1991,7 +2007,7 @@ class BaseInfoWdg(BaseRefreshWdg):
     def get_title_wdg(self, process, node_type, show_node_type_select=True):
 
         div = DivWdg()
-        div.add_style("margin-top: -25px")
+        div.add_style("margin-top: -15px")
 
         table = Table()
         table.add_style("width: 100%")
@@ -3613,7 +3629,10 @@ class ApprovalInfoWdg(BaseInfoWdg):
             div.add("<b>Task setup</b><br/>")
             div.add("Task options allow you to control various default properties of tasks.")
 
-            process_key = process_sobj.get_search_key()
+            if process_sobj:
+                process_key = process_sobj.get_search_key()
+            else:
+                process_key = None
 
             div.add("<br/>"*2)
 
@@ -3624,7 +3643,7 @@ class ApprovalInfoWdg(BaseInfoWdg):
                 'type': 'click_up',
                 'pipeline_code': pipeline_code,
                 'process': process,
-                'search_key': process_sobj.get_search_key(),
+                'search_key': process_key,
                 'cbjs_action': '''
                 var class_name = "tactic.ui.tools.PipelinePropertyWdg";
                 var kwargs = {
@@ -4865,11 +4884,15 @@ class PipelineEditorWdg(BaseRefreshWdg):
         var old_name = data.old_name;
         var name = data.name;
 
+        var server = TacticServerStub.get();
+
         // rename the process on the server
         var group_name = spt.pipeline.get_current_group();
         var process = server.eval("@SOBJECT(config/process['process','"+old_name+"']['pipeline_code','"+group_name+"'])", {single: true});
 
-        server.update(process, {process: name});
+        if (process) {
+            server.update(process, {process: name});
+        }
 
         // select the node
         node.click();

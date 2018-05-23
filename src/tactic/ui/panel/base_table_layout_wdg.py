@@ -134,12 +134,20 @@ class BaseTableLayoutWdg(BaseConfigWdg):
         # handle config explicitly set
         config = self.kwargs.get("config")
         config_xml = self.kwargs.get("config_xml")
+        config_code = self.kwargs.get("config_code")
         self.config_xml = config_xml
         if config_xml:
             # get the base configs
             config = WidgetConfigView.get_by_search_type(search_type=self.search_type, view=self.view)
             extra_config = WidgetConfig.get(view=self.view, xml=config_xml)
             config.get_configs().insert(0, extra_config)
+
+        elif config_code:
+            config_sobj = Search.get_by_code("config/widget_config", config_code)
+            view = config_sobj.get_value("view")
+            config = WidgetConfigView(search_type=None, view=view, configs=[config_sobj])
+
+
 
         elif not config:
             custom_column_configs = WidgetConfigView.get_by_type("column") 
@@ -214,7 +222,6 @@ class BaseTableLayoutWdg(BaseConfigWdg):
                     start_sobj = None
 
                 self.expr_sobjects = Search.eval(expression, start_sobj, list=True)
-
                 parser = ExpressionParser() 
                 related = parser.get_plain_related_types(expression)
 
@@ -230,14 +237,15 @@ class BaseTableLayoutWdg(BaseConfigWdg):
                 if not related_type and self.search_key:
                     # this is needed for single search type expression
                     related_type = SearchKey.extract_search_type(self.search_key)
-                   
-                if self.expr_sobjects and related_type:
+                  
+                if self.expr_sobjects and related_type and not isinstance(self.expr_sobjects[0], Search):
                     # Even if these expression driven sobjects have more than 1 parent.. we can only take 1 parent key
                     # for insert popup purpose.. This doesn't affect the search though since with expression, the search logic
                     # doesn't go through the regular Search
                     related = self.expr_sobjects[0].get_related_sobject(related_type)
                     if related:
                         self.parent_key = SearchKey.get_by_sobject(related, use_id=True)
+
                 elif related_type and self.search_key and related_type in self.search_key:
                     # the expression table could start out empty
                     self.parent_key = self.search_key
@@ -552,6 +560,7 @@ class BaseTableLayoutWdg(BaseConfigWdg):
 
 
 
+
         # don't set the view here, it affects the logic in SearchWdg
         filter_json = ''
         if self.kwargs.get('filter'):
@@ -577,8 +586,21 @@ class BaseTableLayoutWdg(BaseConfigWdg):
             self.search_wdg = SearchWdg(search=search, search_type=self.search_type, state=self.state, filter=filter_json, view=self.search_view, user_override=True, parent_key=None, run_search_bvr=run_search_bvr, limit=limit, custom_search_view=custom_search_view)
 
         
+        """
+        ###FIX ME 
+        table_search = self.search_wdg.get_search()
+        if expr_search:
+            #table_search.add_relationship_search_filter(expr_search)
+            expr_search.add_relationship_search_filter(table_search)
+            search = expr_search
+        else:
+            search = table_search
+       
+        self.search = search
+        """
         search = self.search_wdg.get_search()
         self.search = search
+
 
 
         from tactic.ui.filter import FilterData
@@ -613,6 +635,7 @@ class BaseTableLayoutWdg(BaseConfigWdg):
 
         if self.no_results:
             search.set_null_filter()
+
 
         if expr_search:
             search.add_relationship_search_filter(expr_search)
@@ -704,7 +727,6 @@ class BaseTableLayoutWdg(BaseConfigWdg):
 
         except SqlException as e:
             self.search_wdg.clear_search_data(search.get_base_search_type())
-
 
     	self.element_process_sobjects(search)
 
