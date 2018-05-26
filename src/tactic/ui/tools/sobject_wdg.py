@@ -271,7 +271,7 @@ class SObjectDetailWdg(BaseRefreshWdg):
 
         #change top order of wdg
 
-        title_wdg = my.get_title_wdg()
+        title_wdg = self.get_title_wdg()
         top.add(title_wdg)
         title_wdg.add_style("display: inline-block")
         title_wdg.add_style("vertical-align: top")
@@ -279,12 +279,12 @@ class SObjectDetailWdg(BaseRefreshWdg):
 
         top.add("<hr/>")
 
-        if my.parent:
-            thumb.set_sobject(my.parent)
-            search_key = my.parent.get_search_key()
+        if self.parent:
+            thumb.set_sobject(self.parent)
+            search_key = self.parent.get_search_key()
         else:
-            thumb.set_sobject(my.sobject)
-            search_key = my.sobject.get_search_key()
+            thumb.set_sobject(self.sobject)
+            search_key = self.sobject.get_search_key()
 
         panel_wdg = DivWdg()
         top.add(panel_wdg)
