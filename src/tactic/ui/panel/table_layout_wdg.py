@@ -907,7 +907,7 @@ class FastTableLayoutWdg(BaseTableLayoutWdg):
 
 
             scroll.add_class("spt_table_scroll")
-            scroll.add_attr( "onScroll", '''$(this).getParent('.spt_layout').getElement('.spt_table_with_headers').setStyle('margin-left', -this.scrollLeft);''')
+            scroll.add_attr( "onScroll", '''document.id(this).getParent('.spt_layout').getElement('.spt_table_with_headers').setStyle('margin-left', -this.scrollLeft);''')
             # Scroll event not implemented in behaviors yet
             """
             scroll.add_behavior( {
@@ -1090,6 +1090,7 @@ class FastTableLayoutWdg(BaseTableLayoutWdg):
                     self.is_grouped = False
                     group_level = sobject.get_value("group_level")
                     group_value = sobject.get_value("title")
+                    children = sobject.get_value("children", no_exception=True)
 
 
                     # FIXME: need to eliminate these
@@ -1105,6 +1106,9 @@ class FastTableLayoutWdg(BaseTableLayoutWdg):
 
                     tr.group_level = group_level
                     tr.set_attr("spt_group_level", group_level)
+
+                    if children:
+                        tr.set_attr("spt_children", children)
 
 
                     # keep track of the group stack
@@ -2764,23 +2768,59 @@ class FastTableLayoutWdg(BaseTableLayoutWdg):
 
         self.group_widgets.append(title_div)
 
+        # FIXME: need to move this somewhere else
+        height = 30
+        font_size = 12
+        padding = 10
+        extra_data = self.kwargs.get("extra_data") or {}
+        open_icon = "FA_FOLDER_OPEN_O"
+        closed_icon = "FA_FOLDER_O"
+        group_icon_styles = ""
+        if extra_data:
+            try:
+                extra_data = jsonloads(extra_data)
+            except:
+                print("WARNING: bad extra_data!!!")
+                print(extra_data)
+                extra_data = {}
+
+            min_height = extra_data.get("min_height")
+            if min_height:
+                if isinstance(min_height, basestring):
+                    min_height = min_height.replace("px", "")
+                    min_height = int(min_height)
+                height = min_height + 10
+
+            font_size = extra_data.get("font_size") or font_size
+            padding = extra_data.get("group_level_padding") or padding
 
 
+            if extra_data.get("group_icons"):
+                icons = extra_data.get("group_icons")
+                icons = icons.split(",")
+                open_icon = icons[0]
+                if len(icons) == 1:
+                    closed_icon = icons[0]
+                else:
+                    closed_icon = icons[1]
 
+        table.add_style("font-size: %spx" % font_size)
 
         from tactic.ui.widget.swap_display_wdg import SwapDisplayWdg
         #swap = SwapDisplayWdg(title=title_div, is_on=self.is_on)
         swap = SwapDisplayWdg(is_on=self.is_on)
+
+
         swap.add_class("spt_group_row_collapse")
-        open_div = IconWdg("OPEN", "FA_FOLDER_OPEN_O") 
-        closed_div = IconWdg("CLOSED", "FA_FOLDER_O") 
+        open_div = IconWdg("OPEN", open_icon) 
+        closed_div = IconWdg("CLOSED", closed_icon) 
         swap.set_display_wdgs(open_div, closed_div)
-        swap.add_style("font-weight: bold")
         swap.add_style("margin-left: 5px")
-        swap.add_style("height: 20px")
+        swap.add_style("line-height: %spx" % height)
         swap.set_behavior_top(self.table)
 
         title_div.add_style("width: 100%")
+
 
 
         # build the inner flex layout
@@ -2795,8 +2835,8 @@ class FastTableLayoutWdg(BaseTableLayoutWdg):
 
 
 
-        td.add_style("height: 30px")
-        td.add_style("padding-left: %spx" % (i*10+3))
+        td.add_style("height: %spx" % height)
+        td.add_style("padding-left: %spx" % (i*padding+3))
 
         border_color = tr.get_color("table_border")
         tr.add_border(size="1px 0px 1px 0px", color=border_color)
@@ -3064,6 +3104,29 @@ class FastTableLayoutWdg(BaseTableLayoutWdg):
         tr.add_attr("ondragover", "spt.table.dragover_row(event, this); return false;")
         tr.add_attr("ondragleave", "spt.table.dragleave_row(event, this); return false;")
         tr.add_attr("ondrop", "spt.table.drop_row(event, this); return false;")
+
+
+        # TEST: loading values dynamically using javascript
+        """
+        tr.add_behavior( {
+            'type': 'load',
+            'sobject': sobject.get_sobject_dict(),
+            'cbjs_action': '''
+
+            setTimeout( function() {
+
+            var cells = bvr.src_el.getElements(".spt_update_cellX");
+            for (var i = 0; i < cells.length; i++) {
+                if (cells[i].update) {
+                    cells[i].update(bvr.sobject);
+                }
+            }
+
+            }, 500);
+            '''
+
+        } )
+        """
 
 
         return tr
@@ -3446,7 +3509,7 @@ spt.table.do_search = function(kwargs) {
 
 
 spt.table.dragover_row = function(evt, el) {
-    var top = $(el);
+    var top = document.id(el);
     top.setStyle("border", "dashed 1px blue");
     top.setStyle("background", "rgba(0,0,255,0.05)");
     top.setStyle("opacity", "0.3")
@@ -3454,7 +3517,7 @@ spt.table.dragover_row = function(evt, el) {
 
 
 spt.table.dragleave_row = function(evt, el) {
-    var top = $(el);
+    var top = document.id(el);
     top.setStyle("border", "solid 1px #BBB");
     top.setStyle("background", "");
     top.setStyle("opacity", "1.0")
@@ -3470,7 +3533,7 @@ spt.table.drop_row = function(evt, el) {
     evt.dataTransfer.dropEffect = 'copy';
     var files = evt.dataTransfer.files;
 
-    var top = $(el);
+    var top = document.id(el);
     var thumb_el = top.getElement(".spt_thumb_top");
     if (thumb_el) {
         var size = thumb_el.getSize();
@@ -3516,7 +3579,7 @@ spt.table.drop_row = function(evt, el) {
                 var loadingImage = loadImage(
                     file,
                     function (img) {
-                        img = $(img);
+                        img = document.id(img);
                         img.setStyle("width", "100%");
                         img.setStyle("height", "");
                         thumb_el.innerHTML = "";
@@ -3726,6 +3789,28 @@ spt.table.get_row_by_search_key = function(search_key) {
 }
 
 
+spt.table.get_group_by_search_key = function(search_key, options) {
+    var rows = spt.table.get_group_rows();
+    var parent_group_key = null;
+    if (options) {
+        parent_group_key = options.parent_group_key;
+    }
+    var under_parent;
+    for (var i = 0; i < rows.length; i++) {
+        var row_search_key = rows[i].getAttribute("spt_search_key_v2");
+
+        if (parent_group_key) {
+            under_parent = under_parent ? true : parent_group_key == row_search_key;
+        } else {
+            under_parent = true;
+        }
+
+        if (search_key == row_search_key && under_parent) {
+            return rows[i];
+        }
+    }
+    return null;
+}
 
 
 spt.table.get_cells = function(element_name, tr) {
@@ -4436,10 +4521,11 @@ spt.table.add_new_group = function(kwargs) {
     if (!group_level) {
         group_level = 0;
     }
+    var padding_multiplier = kwargs.padding_multiplier ? kwargs.padding_multiplier : 10
 
     var td = clone.getElement("td");
     td.setAttribute("colspan", headers.length);
-    td.setStyle("padding-left",10*group_level+3);
+    td.setStyle("padding-left", padding_multiplier*group_level+3);
 
     clone.setAttribute("spt_group_level", group_level);
 
@@ -4547,18 +4633,18 @@ spt.table.show_edit = function(cell) {
     // Remove the first child
     // NOTE: this relies on a widget that has all components under the first
     // child.
-    var first_child = $(cell.firstChild);
+    var first_child = document.id(cell.firstChild);
 
     // get the size before the edit widget is added
     var size = cell.getSize();
 
     if (first_child == null) {
-        var tmp = $(document.createElement("span"));
+        var tmp = document.id(document.createElement("span"));
         tmp.innerHTML = "";
         spt.table.last_data_wdg = tmp;
     }
     else if ( first_child.nodeName == '#text') {
-        var tmp = $(document.createElement("span"));
+        var tmp = document.id(document.createElement("span"));
         tmp.innerHTML = first_child.nodeValue;
         spt.table.last_data_wdg = tmp;
     }
@@ -4622,7 +4708,7 @@ spt.table.show_edit = function(cell) {
 
 
     // put a dummy element in there to fill the space
-    var dummy = $(document.createElement("div"));
+    var dummy = document.id(document.createElement("div"));
     if (typeof(size) != 'undefined') {
         // the offset takes into account the padding (3px) and border (1px) x2
         dummy.setStyle("height", size.y-8);
@@ -4688,7 +4774,7 @@ spt.table._find_edit_wdg = function(cell, edit_wdg_template) {
         var get_edit_wdg_code = edit_script;
         var get_edit_wdg_script = spt.CustomProject.get_script_by_path(get_edit_wdg_code);
 
-        edit_wdg = $(document.createElement("div"));
+        edit_wdg = document.id(document.createElement("div"));
         edit_wdg.setStyle("position", "absolute");
         edit_wdg.setStyle("margin-top", "-3px");
         edit_wdg.setStyle("margin-left", "-3px");
@@ -5434,10 +5520,14 @@ spt.table.save_changes = function(kwargs) {
 
     spt.app_busy.show("Saving Changes ...");
     var rows = spt.table.get_changed_rows();
+
+    // insert rows appear to be included now
+    /*
     var insert_rows = spt.table.get_insert_rows();
     for (var i = 0; i < insert_rows.length; i++) {
         rows.push(insert_rows[i]);
     }
+    */
 
     var insert_data = [];
     var update_data = [];
@@ -6505,7 +6595,6 @@ spt.table.expand_table = function(mode) {
    
     // don't set the width of each column, this is simpler
     if ( mode != "full" && width == '100%') {
-        console.log("here");
         table.setStyle("width", "");
         if (header_table) {
             header_table.setStyle("width", "");
@@ -6908,7 +6997,7 @@ spt.table.delete_rows = function(rows) {
 
     var on_post_delete = function() {
         var on_complete = function(id) {
-            spt.behavior.destroy_element($(id));
+            spt.behavior.destroy_element(document.id(id));
         }
         for (var i = 0; i < rows.length; i++) {
             var row = rows[i];
@@ -6929,7 +7018,7 @@ spt.table.delete_rows = function(rows) {
 spt.table.remove_rows = function(rows) {
     var layout = spt.table.get_layout();
     var on_complete = function(id) {
-        spt.behavior.destroy_element($(id));
+        spt.behavior.destroy_element(document.id(id));
     }
     for (var i = 0; i < rows.length; i++) {
         var row = rows[i];
@@ -7029,7 +7118,7 @@ spt.table.operate_selected = function(action)
                 for (var i=0; i < selected_rows.length; i++)
                 {
                     var row = selected_rows[i];
-                    on_complete = "spt.behavior.destroy_element($(id))"
+                    on_complete = "spt.behavior.destroy_element(document.id(id))"
                     spt.dom.load_js(["effects.js"], function() {
                         Effects.fade_out(row, 300, on_complete);
                     } );
@@ -7044,6 +7133,45 @@ spt.table.operate_selected = function(action)
     }
     spt.confirm(msg, ok, cancel);
 }
+
+spt.table.get_parent_groups = function(src_el, level) {
+
+    if (!src_el.hasClass("spt_table_row_item")) {
+        var row = src_el.getParent(".spt_table_row_item");
+    } else {
+        var row = src_el;
+    }
+
+    if (row == null) {
+        return [];
+    }
+
+    var group_level = row.getAttribute("spt_group_level");
+    var group_parents = [];
+    var lowest_group_level = group_level;
+
+    while (true) {
+
+        var group = row.getPrevious(".spt_table_row_item");
+        if (!group) {
+            break;
+        }
+        if ( group.getAttribute("spt_group_level") >= lowest_group_level ) {
+            row = group;
+            continue
+        }
+        lowest_group_level = group.getAttribute("spt_group_level");
+        if (level && level == group.getAttribute("spt_group_level")) {
+            return group;
+        } else {
+            group_parents.push(group);
+        }
+        row = group;
+    }
+
+    return group_parents;
+}
+
 
 
 // Search methods

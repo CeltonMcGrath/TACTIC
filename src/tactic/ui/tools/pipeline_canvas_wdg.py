@@ -226,6 +226,11 @@ class PipelineCanvasWdg(BaseRefreshWdg):
             self.is_editable = True
         #self.is_editable = False
 
+
+        default_node_type = self.kwargs.get("default_node_type") or ""
+        self.top.add_attr("spt_default_node_type", default_node_type)
+
+
     def get_unique_id(self):
         return self.unique_id
 
@@ -303,6 +308,9 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         self.height = self.kwargs.get("height")
         if not self.height:
             self.height = 600
+        self.background_color = self.kwargs.get("background_color")
+        if not self.background_color:
+            self.background_color = "white"
 
 
         # create an inner and outer divs
@@ -407,6 +415,7 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         canvas.add_style("width: %s" % self.width)
         canvas.add_style("height: %s" % self.height)
         canvas.add_style("z-index: 200")
+        canvas.set_attr("spt_background_color", self.background_color)
 
 
         #canvas.add_style("width: 100%")
@@ -684,6 +693,7 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         canvas.add_style("margin-top: -%s" % self.height)
         canvas.set_attr("width", self.width)
         canvas.set_attr("height", self.height)
+        canvas.set_attr("spt_background_color", self.background_color)
 
         canvas.add_style("z-index: 1")
 
@@ -1041,8 +1051,8 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         node.add(left_nob)
         left_nob.add_class("spt_left_nob")
         left_nob.set_round_corners(3, corners=['TL','BL'])
-        left_nob.add_event("onmouseover", "$(this).setStyle('background','rgba(255,255,0,0.7')")
-        left_nob.add_event("onmouseout", "$(this).setStyle('background','rgba(255,255,0,0.2')")
+        left_nob.add_event("onmouseover", "document.id(this).setStyle('background','rgba(255,255,0,0.7')")
+        left_nob.add_event("onmouseout", "document.id(this).setStyle('background','rgba(255,255,0,0.2')")
         left_nob.add_style("cursor: pointer")
         left_nob.add_style("position: absolute")
         left_nob.add_style("border: solid 1px black")
@@ -1083,8 +1093,8 @@ class PipelineCanvasWdg(BaseRefreshWdg):
         right_nob_vis.add_style("width: 10px")
         right_nob_vis.add_style("height: 10px")
         right_nob_vis.add_style("margin-top: %spx" % (height/2-5))
-        right_nob_vis.add_event("onmouseover", "$(this).setStyle('background','rgba(255,255,0,0.7')")
-        right_nob_vis.add_event("onmouseout", "$(this).setStyle('background','rgba(255,255,0,0.2')")
+        right_nob_vis.add_event("onmouseover", "document.id(this).setStyle('background','rgba(255,255,0,0.7')")
+        right_nob_vis.add_event("onmouseout", "document.id(this).setStyle('background','rgba(255,255,0,0.2')")
 
         if self.nob_mode == 'dynamic':
             left_nob.add_style("display: none")
@@ -1948,8 +1958,9 @@ spt.Environment.get().add_library("spt_pipeline");
 
 spt.pipeline = {};
 
-
 spt.pipeline.top = null;
+
+spt.pipeline.background_color = "#fff";
 
 // External method to initialize callback
 spt.pipeline.init_cbk = function(common_top) {
@@ -1981,6 +1992,11 @@ spt.pipeline.set_top = function(top) {
 spt.pipeline._init = function() {
     var top = spt.pipeline.top;
     var canvas = top.getElement(".spt_pipeline_canvas");
+
+    if (canvas) {
+        spt.pipeline.background_color = canvas.getAttribute("spt_background_color");
+    }
+
     if (typeof(canvas.connectors) == 'undefined') {
         canvas.connectors = [];
     }
@@ -2069,6 +2085,10 @@ spt.pipeline.get_data = function() {
     return spt.pipeline.top.spt_data;
 }
 
+spt.pipeline.set_data = function(attr, value) {
+    spt.pipeline.top.spt_data[attr] = value;
+}
+
 spt.pipeline.get_canvas = function() {
     return spt.pipeline.get_data().canvas;
 }
@@ -2143,7 +2163,7 @@ spt.pipeline.hit_test = function(x1, y1, x2, y2) {
     var ctx = spt.pipeline.get_ctx();
     ctx.clearRect(left,top,width,height);
 
-    //spt.pipeline.clear_selected();
+    spt.pipeline.clear_selected();
 
     var canvas = spt.pipeline.get_canvas();
     var connectors = canvas.connectors;
@@ -2731,7 +2751,13 @@ spt.pipeline.add_node = function(name, x, y, kwargs) {
     }
 
     if (!node_type) {
-        node_type = "node";
+        var default_node_type = top.getAttribute("spt_default_node_type");
+        if (default_node_type) {
+            node_type = default_node_type;
+        }
+        else {
+            node_type = "node";
+        }
     }
 
     if (typeof(group) == 'undefined' || group == null) {
@@ -3371,7 +3397,9 @@ spt.pipeline.node_drag_action = function( evt, bvr, mouse_411) {
     spt.named_events.fire_event('pipeline|change', {});
 
     var editor_top = bvr.src_el.getParent(".spt_pipeline_editor_top");
-    editor_top.addClass("spt_has_changes");
+    if (editor_top) {
+        editor_top.addClass("spt_has_changes");
+    }
 
 }
 
@@ -3500,10 +3528,23 @@ spt.pipeline.drag_connector_action = function(evt, bvr, mouse_411) {
         var top = bvr.src_el.getParent(".spt_pipeline_top");
         var event_name = top.getAttribute("id") + "|connector_create";
         spt.named_events.fire_event(event_name, { src_el: connector } );
-
     }
 
-    spt.pipeline.redraw_canvas()
+    spt.pipeline.redraw_canvas();
+
+    var el = connector.panel;
+    connector.set_attr("from_node", from_node.spt_name);
+    connector.set_attr("to_node", to_node.spt_name);
+    if (el) {
+        var data = spt.pipeline.get_data();
+        var pipeline_type = data.type;
+        var connector_panel_data = data.connector_panel_data;
+        if (connector_panel_data[pipeline_type]) {
+            var class_name = connector_panel_data[pipeline_type];
+            var kwargs = {'from_node': from_node.spt_name, 'to_node': to_node.spt_name, 'pipeline_code': group_name, 'overlap': connector.get_attr("overlap")};
+            spt.panel.load(el, class_name, kwargs, {}, {show_loading: false});
+        }
+    }
 }
 
 
@@ -3514,6 +3555,17 @@ spt.pipeline.add_connector = function() {
     connectors.push(connector);
     return connector;
 }
+
+
+
+spt.pipeline.connect_nodes = function(from_node, to_node) {
+    var connector = spt.pipeline.add_connector();
+    connector.set_from_node(from_node);
+    connector.set_to_node(to_node);
+
+    connector.draw();
+} 
+
 
 
 spt.pipeline.delete_connector = function(connector) {
@@ -3541,7 +3593,12 @@ spt.pipeline.delete_connector = function(connector) {
     return connector;
 }
 
-
+spt.pipeline.draw_background = function() {
+    var ctx = spt.pipeline.get_ctx();
+    ctx.fillStyle = spt.pipeline.background_color;
+    var canvas_size = spt.pipeline.get_canvas_size();
+    ctx.fillRect(0, 0, canvas_size.x, canvas_size.y);
+}
 
 
 spt.pipeline.draw_curve = function(start, end) {
@@ -3572,9 +3629,10 @@ spt.pipeline.draw_arc = function(start, end, offset) {
 spt.pipeline.draw_curved_edge = function(start, end) {
     var ctx = spt.pipeline.get_ctx();
     var center_y = (start.y + end.y)/2;
-    var dx = (end.x - start.x) / 2
-    if (dx > 50) {
-        dx = 50;
+    var dx = (end.x - start.x) / 2;
+    var scale = spt.pipeline.get_scale();
+    if (dx > 50*scale) {
+        dx = 50*scale;
     }
     var center_x = start.x+dx;
     ctx.bezierCurveTo(center_x, start.y, center_x, start.y, center_x, center_y);
@@ -3827,6 +3885,7 @@ spt.pipeline.draw_curved_edge_line = function(start, end, color) {
                 tmp_end.x, tmp_end.y
             );
         }
+
     }
     // front 
     else {
@@ -3842,6 +3901,7 @@ spt.pipeline.draw_text = function(text, x, y) {
     ctx.fillText(text, x, y);
 
 }
+
 spt.pipeline.draw_line = function(start, end, color) {
     if (typeof(color) == 'undefined') {
         color = '#111';
@@ -4198,6 +4258,8 @@ spt.pipeline.redraw_canvas = function() {
 
     ctx.clearRect(0,0,width,height);
 
+    spt.pipeline.draw_background();
+
     var connectors = canvas.connectors;
 
     for (var i=0; i<connectors.length; i++) {
@@ -4244,7 +4306,6 @@ spt.pipeline.Connector = function(from_node, to_node) {
         var to_width = to_size.x;
         var to_height = to_size.y;
 
-
         // HACKY offset for condition nodes.  This is because rotate square does
         // not give the widget of the corners
         if (spt.pipeline.get_node_type(this.from_node) == "condition") {
@@ -4256,8 +4317,8 @@ spt.pipeline.Connector = function(from_node, to_node) {
 
 
         // offset by the size
-        from_pos = {x: from_pos.x + from_width, y: from_pos.y + from_height/2 };
-        to_pos = {x: to_pos.x, y: to_pos.y + to_height/2 };
+        unscaled_from_pos = {x: from_pos.x + from_width, y: from_pos.y + from_height/2 };
+        unscaled_to_pos = {x: to_pos.x, y: to_pos.y + to_height/2 };
 
         // put a scale transformation on it
         // moz transform scales from the center, so have to move
@@ -4267,15 +4328,15 @@ spt.pipeline.Connector = function(from_node, to_node) {
         height = size.y;
 
         from_pos = {
-            x: (from_pos.x - width/2) * scale + width/2,
-            y: (from_pos.y - height/2) * scale + height/2,
+            x: (unscaled_from_pos.x - width/2) * scale + width/2,
+            y: (unscaled_from_pos.y - height/2) * scale + height/2,
         }
 
 
 
         to_pos = {
-            x: (to_pos.x - width/2) * scale + width/2,
-            y: (to_pos.y - height/2) * scale + height/2,
+            x: (unscaled_to_pos.x - width/2) * scale + width/2,
+            y: (unscaled_to_pos.y - height/2) * scale + height/2,
         }
 
         var data = spt.pipeline.get_data();
@@ -4283,6 +4344,34 @@ spt.pipeline.Connector = function(from_node, to_node) {
             spt.pipeline.draw_curved_edge_line(from_pos, to_pos, this.color);
         } else {
             spt.pipeline.draw_connector(from_pos, to_pos, this.color);
+        }
+
+
+        var data = spt.pipeline.get_data();
+        var pipeline_type = data.type;
+        var connector_panel_data = data.connector_panel_data;
+        
+        if (connector_panel_data[pipeline_type]) {
+            if (!this.panel) {
+                var canvas = spt.pipeline.get_canvas();
+                var new_el = Element("div");
+                new_el.addClass("spt_connector_data");
+                new_el.setStyle("position", "absolute");
+                var from_node = this.from_node.getAttribute("spt_element_name");
+                var to_node = this.to_node.getAttribute("spt_element_name");
+                new_el.setAttribute("spt_from_node", from_node);
+                new_el.setAttribute("spt_to_node", to_node);
+                canvas.appendChild(new_el);
+                this.panel = new_el;
+            }
+            var y = (unscaled_from_pos.y + unscaled_to_pos.y)/2;
+            var dx = (unscaled_to_pos.x - unscaled_from_pos.x)/2;
+            if (dx > 50) {
+                dx = 50;
+            }
+            dx = dx - 12
+            dy = -8
+            spt.pipeline.move_to(this.panel, unscaled_from_pos.x+dx, y+dy);
         }
             
 
@@ -4304,27 +4393,6 @@ spt.pipeline.Connector = function(from_node, to_node) {
                 spt.pipeline.draw_text(from_attr, from_pos.x + from_dx, from_pos.y + from_dy);
                 spt.pipeline.draw_text(to_attr, to_pos.x + to_dx, to_pos.y + to_dy);
             }
-        }
-
-	var data = spt.pipeline.get_data();
-	var pipeline_type = data.type;
-	var connector_panel_data = data.connector_panel_data;
-	if (connector_panel_data[pipeline_type]) {
-            if (!this.panel) {
-                var canvas = spt.pipeline.get_canvas();
-                var new_el = Element("div");
-                new_el.addClass("spt_connector_data");
-                new_el.setStyle("position", "absolute");
-                var from_node = this.from_node.getAttribute("spt_element_name");
-                var to_node = this.to_node.getAttribute("spt_element_name");
-                new_el.setAttribute("spt_from_node", from_node);
-                new_el.setAttribute("spt_to_node", to_node);
-                canvas.appendChild(new_el);
-                this.panel = new_el;
-            }
-            var x = (from_pos.x + to_pos.x)/2;
-            var y = (from_pos.y + to_pos.y)/2;
-            spt.pipeline.move_to(this.panel, x, y);
         }
 
 
@@ -4388,9 +4456,12 @@ spt.pipeline.Connector = function(from_node, to_node) {
     }
 
 
-    this.select = function() {
+    this.select = function(color) {
         spt.pipeline.add_to_selected(this);
-        this.set_color("red");
+        if (!color) {
+            color = "red";
+        }
+        this.set_color(color);
     }
 
     this.set_from_node = function(from_node) {
@@ -4421,6 +4492,10 @@ spt.pipeline.Connector = function(from_node, to_node) {
     this.get_attrs = function() {
         return this.attrs;
     }
+
+    /*if (!this.get_attr("overlap")) {
+        this.set_attr("overlap", 100);
+    }*/
 
 
 }
@@ -4603,9 +4678,10 @@ spt.pipeline.import_pipeline = function(pipeline_code, color) {
     process_sobjs = server.eval("@SOBJECT(config/process['pipeline_code','"+pipeline_code+"'])");
     processes = {};
     for (var i = 0; i < process_sobjs.length; i++) {
-        var name = process_sobjs[i].process;
-        var process_code = process_sobjs[i].code;
-        processes[name] = process_code;
+        var process_sobj = process_sobjs[i];
+        var name = process_sobj.process;
+        var process_code = process_sobj.code;
+        processes[name] = process_sobj;
     }
 
     
@@ -4652,15 +4728,28 @@ spt.pipeline.import_pipeline = function(pipeline_code, color) {
     for (var i = 0; i < approval_nodes.length; i++) {
         xml_nodes.push(approval_nodes[i]);
     }
-    for (var i = 0; i < process_nodes.length; i++) {
-        xml_nodes.push(process_nodes[i]);
 
+    for (var i = 0; i < process_nodes.length; i++) {
         // add a process code
         var name = process_nodes[i].getAttribute("name");
-        var process_code = processes[name];
-        if (process_code) {
-            process_nodes[i].setAttribute("process_code", process_code)
+        var process = processes[name];
+        if (process) {
+            process_nodes[i].setAttribute("process_code", process.code)
+            var settings = process.workflow;
+            if (!settings) {
+                settings = {};
+            } else {
+                settings = JSON.parse(settings);
+            }
+
+            // add the process name
+            if (process.subpipeline_code) settings['subpipeline_code'] = process.subpipeline_code;
+            if (process.process) settings['process'] = process.process;
+            process_nodes[i].setAttribute("settings", JSON.stringify(settings));
         }
+        
+        xml_nodes.push(process_nodes[i]);
+
     }
 
 
@@ -4740,6 +4829,47 @@ spt.pipeline.import_schema = function(schema_code, color) {
 }
 
 
+spt.pipeline.set_node_value = function(node, name, value, kwargs) {
+
+    // set the workflow value
+    var workflow = node.workflow;
+    if (!node.workflow) {
+        workflow = node.workflow = {};
+    }
+
+    workflow[name] = value;
+
+    // node.properties goes into xml, code is redundant but it works for now
+    spt.pipeline.set_node_property(node, "settings", workflow);
+
+    
+    var class_name = kwargs.class_name;
+    if (class_name) {
+        var update_el = node.getElement("."+class_name);
+        if (update_el) {
+            if (update_el.update) {
+                update_el.update(value);
+            }
+            else {
+                update_el.innerHTML = value;
+            }
+        }
+    }
+
+}
+
+spt.pipeline.get_node_value = function(node, name) {
+    var workflow = node.workflow;
+    if (!node.workflow) {
+        return null;
+    }
+
+    return workflow[name];
+}
+
+spt.pipeline.get_node_values = function(node) {
+    return node.workflow;
+}
 
 
 spt.pipeline.import_nodes = function(group, xml_nodes) {
@@ -4823,12 +4953,23 @@ spt.pipeline.import_nodes = function(group, xml_nodes) {
 
 
 
-        // hacky refressh
-        var process_code = xml_nodes[i].getAttribute("process_code")
-        if (process_code) {
-            var el = node.getElement(".spt_panel")
-            if (el) {
-		spt.panel.refresh_element(el, {process_code: process_code});
+        var settings = xml_nodes[i].getAttribute("settings");
+        if (settings) {
+            settings = JSON.parse(settings);
+            if (node.update_node_settings) {
+                node.update_node_settings(settings);
+            }
+        }
+
+        else {
+
+            // hacky refressh
+            var process_code = xml_nodes[i].getAttribute("process_code")
+            if (process_code) {
+                var el = node.getElement(".spt_panel")
+                if (el) {
+                    spt.panel.refresh_element(el, {process_code: process_code});
+                }
             }
         }
     }
@@ -4895,14 +5036,14 @@ spt.pipeline.load_connects = function(group_name, xml_connects) {
         // Load connector panel
         var el = connector.panel;
         if (el) {
-	    var data = spt.pipeline.get_data();
-	    var pipeline_type = data.type;
-	    var connector_panel_data = data.connector_panel_data;
-	    if (connector_panel_data[pipeline_type]) {
-		var class_name = connector_panel_data[pipeline_type];
-                var kwargs = {'from_node': from, 'to_node': to, 'pipeline_code': group_name};
-		spt.panel.load(el, class_name, kwargs, {}, {show_loading: false});
-	    }
+	        var data = spt.pipeline.get_data();
+	        var pipeline_type = data.type;
+	        var connector_panel_data = data.connector_panel_data;
+	        if (connector_panel_data[pipeline_type]) {
+		        var class_name = connector_panel_data[pipeline_type];
+                var kwargs = {'from_node': from, 'to_node': to, 'pipeline_code': group_name, 'overlap': connector.get_attr("overlap")};
+		        spt.panel.load(el, class_name, kwargs, {}, {show_loading: false});
+	        }
         }
 
     }
@@ -5164,11 +5305,20 @@ spt.pipeline.export_group = function(group_name) {
             if (['name','xpos','ypos','type','names','namedItem','item'].contains(key)) {
                 continue;
             }
+
             var value = properties[key];
-            if (value == '') {
-                continue;
+            if (key == "settings" && value) {
+                settings_str = JSON.stringify(value);
+                xml += " "+key+"='"+settings_str+"'";
+
+
             }
-            xml += ' '+key+'="'+value+'"';
+            else {
+                if (value == '') {
+                    continue;
+                }
+                xml += ' '+key+'="'+value+'"';
+            }
         }
         xml += '/>\n';
     }
@@ -5228,6 +5378,27 @@ spt.pipeline.export_group = function(group_name) {
 
     return xml;
 
+}
+
+spt.pipeline.get_connector_by_nodes = function(from_name, to_name) {
+    var pipeline_code = spt.pipeline.get_current_group();
+    var group = spt.pipeline.get_group(pipeline_code);
+    var connectors = group.get_connectors();
+    var connector = null;
+
+    for (var i = 0; i < connectors.length; i++) {
+        from_node = connectors[i].get_from_node();
+        to_node = connectors[i].get_to_node();
+
+        if (   (from_node.spt_name == from_name) &&
+               (to_node.spt_name == to_name)     ) {
+
+            connector = connectors[i];
+            break;
+       }
+    }
+
+    return connector;
 }
 
     '''

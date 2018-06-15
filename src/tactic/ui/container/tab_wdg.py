@@ -13,7 +13,7 @@
 __all__ = ['TabWdg', 'TabSaveStateCmd']
 
 from pyasm.common import TacticException, Xml, Common, Environment, Container
-from pyasm.web import DivWdg, SpanWdg, WebState, WebContainer, WidgetSettings
+from pyasm.web import DivWdg, SpanWdg, WebState, WebContainer, WidgetSettings, HtmlElement
 from pyasm.search import Search
 from pyasm.widget import WidgetConfigView, WidgetConfig, IconWdg
 from tactic.ui.common import BaseRefreshWdg
@@ -61,13 +61,13 @@ spt.tab = {};
 spt.tab.top = null;
 
 spt.tab.set_main_body_tab = function() {
-    spt.tab.top = $(document.body).getElement(".spt_tab_top");
+    spt.tab.top = document.id(document.body).getElement(".spt_tab_top");
     return spt.tab.top;
 }
 
 // this is to be deprecated
 spt.tab.set_main_body_top = function() {
-    spt.tab.top = $('main_body').getElement(".spt_tab_top");
+    spt.tab.top = document.id('main_body').getElement(".spt_tab_top");
 }
 
 
@@ -431,7 +431,7 @@ spt.tab.add_new = function(element_name, title, class_name, kwargs,
     if (subelement_name) {
         // find out if the subheader exists
         var subheader_id = header.getAttribute("spt_subheader_id");
-        var subheader_top = $(subheader_id);
+        var subheader_top = document.id(subheader_id);
         var subheaders = subheader_top.getElements(".spt_tab_subheader_item");
 
         var subheader_exists = false;
@@ -448,7 +448,7 @@ spt.tab.add_new = function(element_name, title, class_name, kwargs,
         if (subheader_exists == false) {
 
             // create a new one
-            var subheader = $(document.createElement("div"));
+            var subheader = document.id(document.createElement("div"));
             subheader.innerHTML = "<div style='padding: 5px 5px'><div class='spt_tab_header_label'>"+subelement_name+"</div></div>";
             subheader_top.appendChild(subheader);
             subheader.addClass("spt_tab_subheader_item");
@@ -765,7 +765,7 @@ spt.tab.load_class = function(header, class_name, kwargs, values, force) {
         if (header.hasClass("spt_tab_subheader_item")) {
             var subheader_top = header.getParent(".spt_tab_subheader");
             header_id = subheader_top.getAttribute("spt_header_id");
-            select_header = $(header_id);
+            select_header = document.id(header_id);
         }
         else {
             select_header = header;
@@ -1088,7 +1088,7 @@ spt.tab.close = function(src_el) {
         var element_name = header.getAttribute("spt_element_name");
 
         if (header) {
-            var subheader = $(header.getAttribute("spt_subheader_id"));
+            var subheader = document.id(header.getAttribute("spt_subheader_id"));
             if (subheader) {
                 var items = subheader.getElements(".spt_tab_subheader_item");
                 for (var i = 0; i < items.length; i++) {
@@ -1816,7 +1816,7 @@ spt.tab.close = function(src_el) {
                 subheaders[i].setStyle("display", "none");
             }
 
-            var el = $(subheader_id);
+            var el = document.id(subheader_id);
             var items = el.getElements(".spt_tab_subheader_item");
             if (items.length == 0) {
                 return;
@@ -2531,8 +2531,8 @@ spt.tab.close = function(src_el) {
         remove_wdg.add_style("right: 2px")
         remove_wdg.add_style("top: 8px")
         remove_wdg.add_style("z-index: 2")
-        remove_wdg.add_style("width: 15px")
-        remove_wdg.add_style("height: 15px")
+        remove_wdg.add_style("width: 16px")
+        remove_wdg.add_style("height: 16px")
         remove_wdg.add_style("padding-left: 2px")
 
         remove_wdg.add_style("border-radius: 10px")
@@ -2542,8 +2542,13 @@ spt.tab.close = function(src_el) {
         remove_wdg.add_style("border: solid 1px transparent")
 
 
-
-        icon = IconWdg("Remove Tab", "FA_REMOVE", size=12)
+        remove_icon_path = self.kwargs.get("remove_icon_path")
+        if (remove_icon_path):
+            icon = HtmlElement.img(remove_icon_path)
+            icon.add_styles("padding: 2px; width: 11px")
+            remove_wdg.add_style("right: 6px;")
+        else:
+            icon = IconWdg("Remove Tab", "FA_REMOVE", size=12)
         icon.add_class("spt_icon_active")
         icon.add_styles("margin: auto;position: absolute;top: 0;bottom: 0; max-height: 100%; opacity: 0.3;")
         remove_wdg.add(icon)

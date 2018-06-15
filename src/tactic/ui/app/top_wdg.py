@@ -20,7 +20,7 @@ import os
 import js_includes
 
 from pyasm.common import Common, Container, Environment, jsondumps, jsonloads, Config
-from pyasm.biz import Project
+from pyasm.biz import Project, ProjectSetting
 from pyasm.web import WebContainer, Widget, HtmlElement, DivWdg, BaseAppServer, Palette, SpanWdg
 from pyasm.widget import IconWdg
 from pyasm.search import Search
@@ -94,7 +94,7 @@ class TopWdg(Widget):
         spt.body = {};
 
         spt.body.is_active = function() {
-            return $(document.body).spt_window_active;
+            return document.id(document.body).spt_window_active;
         }
 
         spt.body.focus_elements = [];
@@ -182,7 +182,7 @@ class TopWdg(Widget):
 
         }
         //bvr.src_el.addEvent("mousedown", spt.body.hide_focus_elements);
-        $(document.body).addEvent("mousedown", spt.body.hide_focus_elements);
+        document.id(document.body).addEvent("mousedown", spt.body.hide_focus_elements);
 
         '''
         } )
@@ -264,7 +264,7 @@ class TopWdg(Widget):
                 var target = top.getElement("."+parts[1]);  
             }
             else {
-                var target = $(document.body).getElement("."+target_class);
+                var target = document.id(document.body).getElement("."+target_class);
             }
 
 
@@ -329,7 +329,7 @@ class TopWdg(Widget):
                 var target = top.getElement("."+parts[1]);  
             }
             else {
-                var target = $(document.body).getElement("."+target_class);
+                var target = document.id(document.body).getElement("."+target_class);
             }
 
             spt.panel.refresh(target);
@@ -762,7 +762,7 @@ class TopWdg(Widget):
         'event_name': 'show_script_editor',
         'cbjs_action': '''
         var js_popup_id = "TACTIC Script Editor";
-        var js_popup = $(js_popup_id);
+        var js_popup = document.id(js_popup_id);
         if( js_popup ) {
             spt.popup.toggle_display( js_popup_id, false );
         }
@@ -975,9 +975,16 @@ class TopWdg(Widget):
         for include in includes:
             include = include.strip()
             if include:
-                print("include: ", include)
                 widget.add('<link rel="stylesheet" href="%s" type="text/css" />\n' % include )
 
+
+
+        includes = ProjectSetting.get_value_by_key("css_libraries")
+        includes = includes.split(",")
+        for include in includes:
+            include = include.strip()
+            if include:
+                widget.add('<link rel="stylesheet" href="%s" type="text/css" />\n' % include )
         return widget
 
 
@@ -996,6 +1003,14 @@ class JavascriptImportWdg(BaseRefreshWdg):
         third_party = js_includes.third_party
         security = Environment.get_security()
 
+        Container.append_seq("Page:js", "%s/load-image.min.js" % spt_js_url)
+
+        if not web.is_admin_page():
+            Container.append_seq("Page:js", "%s/require.js" % spt_js_url)
+            use_jquery = ProjectSetting.get_value_by_key("js_libraries/jquery")
+            if use_jquery == "true":
+                Container.append_seq("Page:js", "%s/jquery.js" % spt_js_url)
+
 
         for include in js_includes.third_party:
             Container.append_seq("Page:js", "%s/%s" % (spt_js_url,include))
@@ -1005,34 +1020,33 @@ class JavascriptImportWdg(BaseRefreshWdg):
         if os.path.exists( all_js_path ):
             Container.append_seq("Page:js", "%s/%s" % (context_url, js_includes.get_compact_js_context_path_suffix()))
         else:
-            for include in js_includes.legacy_core:
-                Container.append_seq("Page:js", "%s/%s" % (js_url,include))
+            #for include in js_includes.legacy_core:
+            #    Container.append_seq("Page:js", "%s/%s" % (js_url,include))
 
             for include in js_includes.spt_js:
                 Container.append_seq("Page:js", "%s/%s" % (spt_js_url,include))
 
-            for include in js_includes.legacy_app:
-                Container.append_seq("Page:js", "%s/%s" % (js_url,include))
+            #for include in js_includes.legacy_app:
+            #    Container.append_seq("Page:js", "%s/%s" % (js_url,include))
 
 
-        from pyasm.biz import ProjectSetting
         includes = ProjectSetting.get_value_by_key("js_libraries")
-        if includes:
+        if includes == "__NONE__":
+            pass
+        elif includes:
             includes = includes.split(",")
             for include in includes:
                 include = include.strip()
                 if include:
                     Container.append_seq("Page:js", include)
         else:
-
-
             # custom js files to include
             includes = Config.get_value("install", "include_js")
             includes = includes.split(",")
             for include in includes:
+
                 include = include.strip()
                 if include:
-                    print("include: ", include)
                     Container.append_seq("Page:js", include)
 
 
@@ -1165,6 +1179,10 @@ class IndexWdg(Widget):
 
         top = self.top
         top.set_id('top_of_application')
+        top.add_style("height: 100%")
+        top.add_style("width: 100%")
+        top.add_style("overflow-x: auto")
+        top.add_style("overflow-y: auto")
 
         from tactic.ui.panel import HashPanelWdg 
         splash_div = HashPanelWdg.get_widget_from_hash("/splash", return_none=True)

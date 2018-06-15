@@ -37,7 +37,7 @@ class ShelfWdg(BaseRefreshWdg):
 
         js_editor_wdg = ShelfEditWdg()
 
-        # div.add( "[<span onclick='$(\"ShelfEditWdg\").setStyle(\"display\",\"block\");' style='cursor: pointer;'>" \
+        # div.add( "[<span onclick='document.id(\"ShelfEditWdg\").setStyle(\"display\",\"block\");' style='cursor: pointer;'>" \
         #          "js_edit<span>]" )
 
         launch_link = DivWdg()
@@ -98,7 +98,7 @@ class ShelfWdg(BaseRefreshWdg):
             '''
         elif script_name == "js_edit":
             custom_script = '''
-            $('ShelfEditWdg').setStyle("display", 'block');
+            document.id('ShelfEditWdg').setStyle("display", 'block');
             '''
         else:
             custom_script = "alert('[%s] not implemented')" % script_name
@@ -270,7 +270,7 @@ class ScriptEditorWdg(BaseRefreshWdg):
         button.add_behavior( {
             'type': 'click_up',
             'cbjs_action': '''
-            //var editor = $('shelf_script');
+            //var editor = document.id('shelf_script');
             var value = editAreaLoader.getValue('shelf_script')
             eval( value )
             '''
@@ -581,7 +581,7 @@ spt.script_editor.display_script_cbk = function(evt, bvr)
 
     //editAreaLoader.setValue("shelf_script", script_text);
     //editAreaLoader.setSelectionRange("shelf_script", 0, 0);
-    //$("shelf_script").value = script_text;
+    //document.id("shelf_script").value = script_text;
 }
 
 
@@ -633,7 +633,7 @@ spt.script_editor.save_script_cbk = function(evt, bvr)
     server.finish();
 
     // remember the script value
-    //var script_text = $("shelf_script").value;
+    //var script_text = document.id("shelf_script").value;
 
     // destroy before reloading
     spt.ace_editor.editor.destroy();
@@ -795,7 +795,7 @@ class AceEditorWdg(BaseRefreshWdg):
             var editor_id = spt.ace_editor.editor_id;
 
             var value = bvr.src_el.value;
-            $(editor_id).setStyle("font-size", value)
+            document.id(editor_id).setStyle("font-size", value)
             //editor.resize();
             '''
         } )
@@ -894,6 +894,8 @@ class AceEditorWdg(BaseRefreshWdg):
         editor_div = DivWdg()
         top.add(editor_div)
 
+        top.add("<style>.spt_ace_editor_top div { font-family: courier new; }</style>")
+
 
 
 
@@ -975,7 +977,7 @@ spt.ace_editor.theme = bvr.theme;
 
 spt.ace_editor.set_editor = function(editor_id) {
     spt.ace_editor.editor_id = editor_id;
-    spt.ace_editor.editor = $(editor_id).editor;
+    spt.ace_editor.editor = document.id(editor_id).editor;
 }
 
 spt.ace_editor.set_editor_top = function(top_el) {
@@ -1076,7 +1078,7 @@ spt.ace_editor.set_language = function(value) {
     }
 
     var editor = spt.ace_editor.editor;
-    var top = $(spt.ace_editor.editor_id).getParent(".spt_ace_editor_top");
+    var top = document.id(spt.ace_editor.editor_id).getParent(".spt_ace_editor_top");
     var lang_el = top.getElement(".spt_language");
 
     for ( var i = 0; i < lang_el.options.length; i++ ) {
@@ -1130,7 +1132,7 @@ spt.ace_editor.drag_resize_setup = function(evt, bvr, mouse_411)
     spt.ace_editor.drag_start_x = mouse_411.curr_x;
     spt.ace_editor.drag_start_y = mouse_411.curr_y;
 
-    var editor_el = $(editor_id);
+    var editor_el = document.id(editor_id);
     spt.ace_editor.drag_editor_el = editor_el;
     spt.ace_editor.drag_size = editor_el.getSize();
 
@@ -1167,11 +1169,6 @@ spt.ace_editor.drag_resize_motion = function(evt, bvr, mouse_411)
     editor.resize();
 
 }
-    var js_files = [
-        "ace/ace-1.2.3/src/ace.js",
-        //"ace/ace-1.2.3/src/ace-uncompressed.js",
-    ];
-
 
    
 
@@ -1181,7 +1178,7 @@ spt.ace_editor.drag_resize_motion = function(evt, bvr, mouse_411)
 
         // put the editor into the dom
         spt.ace_editor.editor_id = bvr.unique_id;
-        $(bvr.unique_id).editor = editor;
+        document.id(bvr.unique_id).editor = editor;
 
         editor.setTheme("ace/theme/" + spt.ace_editor.theme);
         
@@ -1193,7 +1190,15 @@ spt.ace_editor.drag_resize_motion = function(evt, bvr, mouse_411)
         }
     }
 
-    
+ 
+
+
+     var js_files = [
+        "/context/spt_js/ace/ace-1.2.3/src/ace.js",
+        //"ace/ace-1.2.3/src/ace-uncompressed.js",
+    ];
+
+   
 
 
     spt.dom.load_js(js_files, function() { 
@@ -1201,20 +1206,19 @@ spt.ace_editor.drag_resize_motion = function(evt, bvr, mouse_411)
         ace; require; define; 
 
         var core_js_files = [
-            "ace/ace-1.2.3/src/mode-javascript.js",
-            "ace/ace-1.2.3/src/mode-xml.js",
-            "ace/ace-1.2.3/src/mode-python.js",
-            "ace/ace-1.2.3/src/mode-html.js",
-            "ace/ace-1.2.3/src/theme-twilight.js",
-            "ace/ace-1.2.3/src/theme-textmate.js",
-            "ace/ace-1.2.3/src/theme-vibrant_ink.js",
-            "ace/ace-1.2.3/src/theme-merbivore.js",
-            "ace/ace-1.2.3/src/theme-clouds.js",
-            "ace/ace-1.2.3/src/theme-eclipse.js"
+            "/context/spt_js/ace/ace-1.2.3/src/mode-javascript.js",
+            "/context/spt_js/ace/ace-1.2.3/src/mode-xml.js",
+            "/context/spt_js/ace/ace-1.2.3/src/mode-python.js",
+            "/context/spt_js/ace/ace-1.2.3/src/mode-html.js",
+            "/context/spt_js/ace/ace-1.2.3/src/theme-twilight.js",
+            "/context/spt_js/ace/ace-1.2.3/src/theme-textmate.js",
+            "/context/spt_js/ace/ace-1.2.3/src/theme-vibrant_ink.js",
+            "/context/spt_js/ace/ace-1.2.3/src/theme-merbivore.js",
+            "/context/spt_js/ace/ace-1.2.3/src/theme-clouds.js",
+            "/context/spt_js/ace/ace-1.2.3/src/theme-eclipse.js"
         ];
         
-        //var supp_js_files = [];
-           
+        //require(core_js_files, ace_setup);
         spt.dom.load_js(core_js_files, ace_setup);
         
         //spt.dom.load_js(supp_js_files);      
@@ -1237,7 +1241,7 @@ else {
 
     spt.ace_editor.editor_id = bvr.unique_id;
     spt.ace_editor.editor = editor;
-    $(bvr.unique_id).editor = editor;
+    document.id(bvr.unique_id).editor = editor;
 
 }
             '''
@@ -1366,8 +1370,8 @@ else {
             'cbjs_action': '''
             var editor = spt.ace_editor.editor;
             var editor_id = spt.ace_editor.editor_id;
-            $(editor_id).setStyle("width", "1000px");
-            $(editor_id).setStyle("height", "800px");
+            document.id(editor_id).setStyle("width", "1000px");
+            document.id(editor_id).setStyle("height", "800px");
             editor.resize();
 
             '''

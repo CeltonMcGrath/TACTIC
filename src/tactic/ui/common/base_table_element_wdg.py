@@ -226,8 +226,8 @@ class BaseTableElementWdg(BaseRefreshWdg, FormerBaseTableElementWdg):
 
             var top = spt.simple_search.get_top();
             var size = top.getSize();
-            var cur_pos = top.getPosition( $(document.body) );
-            var window_size = $(document.body).getSize();
+            var cur_pos = top.getPosition( document.id(document.body) );
+            var window_size = document.id(document.body).getSize();
             if (cur_pos.x + size.x > window_size.x) {
                 var panel_size = panel.getSize();
                 pos.x = panel_size.x - size.x;
@@ -700,6 +700,32 @@ class SimpleTableElementWdg(BaseTableElementWdg):
 
         else:
             value_wdg.add(value)
+
+
+        # TEST: loading values dynamically using javascript
+        """
+        value_wdg.add_attr("spt_value", value)
+        value_wdg.add_attr("spt_name", name)
+        value_wdg.add_class("spt_update_cellX")
+        value_wdg.add_behavior( {
+            'type': 'load',
+            'cbjs_action': '''
+            bvr.src_el.update = function(data) {
+                var el = document.id(this);
+                var name = el.getAttribute("spt_name");
+                var value = data[name];
+                el.innerHTML = value + "!!!";
+
+            }
+
+            var name = bvr.src_el.getAttribute("spt_name");
+            var value = bvr.src_el.getAttribute("spt_value");
+            var data = {};
+            data[name] = value;
+            bvr.src_el.update( data );
+            '''
+        } )
+        """
 
 
         return value_wdg

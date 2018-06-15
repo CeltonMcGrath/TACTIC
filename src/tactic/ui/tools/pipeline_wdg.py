@@ -16,7 +16,7 @@ import re
 import os
 from tactic.ui.common import BaseRefreshWdg
 
-from pyasm.common import Environment, Common
+from pyasm.common import Environment, Common, jsonloads
 from pyasm.biz import Pipeline, Project
 from pyasm.command import Command
 from pyasm.web import DivWdg, WebContainer, Table, SpanWdg, HtmlElement
@@ -1149,6 +1149,8 @@ class PipelineToolCanvasWdg(PipelineCanvasWdg):
         spt.pipeline.init(bvr);
         var node = bvr.src_el;
 
+        var properties = spt.pipeline.get_node_properties(node);
+
         var node_name = spt.pipeline.get_node_name(node);
         var group_name = spt.pipeline.get_current_group();
         var top = bvr.src_el.getParent(".spt_pipeline_tool_top");
@@ -1166,7 +1168,8 @@ class PipelineToolCanvasWdg(PipelineCanvasWdg):
         var kwargs = {
             pipeline_code: group_name,
             process: node_name,
-            node_type: node_type
+            node_type: node_type,
+            properties: properties
         }
         spt.panel.load(info, class_name, kwargs);
 
@@ -1196,8 +1199,8 @@ class PipelineToolCanvasWdg(PipelineCanvasWdg):
                 return;
             }
 
-            to_attr = connector.get_attr("to_attr"),
-            from_attr = connector.get_attr("from_attr")
+            to_attr = connector.get_attr("to_attr");
+            from_attr = connector.get_attr("from_attr");
             draw_attr = true;
 
             connector.draw_spline(draw_attr);
@@ -6345,7 +6348,34 @@ class PipelineSaveCbk(Command):
         pipeline_xml = self.kwargs.get('pipeline')
         pipeline_color = self.kwargs.get('color')
         project_code = self.kwargs.get('project_code')
+        timestamp = self.kwargs.get("timestamp")
 
+        from pyasm.common import Xml
+        xml = Xml()
+        xml.read_string(pipeline_xml)
+        process_nodes = xml.get_nodes("pipeline/process")
+        settings_list = []
+
+        for node in process_nodes:
+            settings_str = xml.get_attribute(node, "settings")
+            
+            if settings_str:
+                try:
+                    settings = jsonloads(settings_str)
+                    if type(settings) == unicode:
+                        import ast
+                        settings = ast.literal_eval(settings)
+                except:
+                    process_name = xml.get_attribute(node, "name")
+                    print "WARNING: Setting for process %s not saved." % process_name 
+            else:
+                settings = {}
+
+            settings_list.append(settings)
+
+            xml.del_attribute(node, "settings")
+
+        pipeline_xml = xml.to_string()
         server = TacticServerStub.get(protocol='local')
         data =  {'pipeline':pipeline_xml, 'color':pipeline_color}
         if project_code:
@@ -6353,6 +6383,8 @@ class PipelineSaveCbk(Command):
             if project_code == '__SITE_WIDE__':
                 project_code = ''
             data['project_code'] = project_code
+        if timestamp:
+            data['timestamp'] = timestamp
 
         server.insert_update(pipeline_sk, data = data)
 
@@ -6370,8 +6402,52 @@ class PipelineSaveCbk(Command):
         """
 
         pipeline.update_dependencies()
+
         
         self.description = "Updated workflow [%s]" % pipeline_code
+
+        for i in range(len(process_nodes)):
+            node = process_nodes[i]
+            process = None
+            process_code = xml.get_attribute(node, "process_code")
+            process_name = xml.get_attribute(node, "name")
+            print "process_code: ", "[%s]" % process_code, process_name
+            if process_code:
+                process = Search.get_by_code("config/process", process_code)
+
+
+            # try to find it by name
+            if not process:
+                search = Search("config/process")
+                search.add_filter("process", process_name)
+                search.add_filter("pipeline_code", pipeline_code)
+                process = search.get_sobject()
+
+
+
+            # else create a new one 
+            if not process:
+                process = SearchType.create("config/process")
+                process.set_value("process", process_name)
+                process.set_value("pipeline_code", pipeline_code)
+           
+
+            # set the process code
+            xml.set_attribute(node, "process_code", process.get_code())
+
+
+            settings = settings_list[i]
+
+            subpipeline_code = settings.pop("subpipeline_code", None)
+            if subpipeline_code:
+                process.set_value("subpipeline_code", subpipeline_code)
+            
+            process.set_value("workflow", settings)
+            
+            process.commit()
+            
+
+
         
 
 
