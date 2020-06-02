@@ -153,10 +153,9 @@ class APIRestHandler(BaseRestHandler):
 
         if not call:
             kwargs = {}
-
             for key in keys:
 
-                if key in ["method", "login_ticket", "password", "domain"]:
+                if key in ["method", "login_ticket", "password", "domain", "login_message"]:
                     continue
 
                 if key == 'kwargs':
@@ -174,12 +173,14 @@ class APIRestHandler(BaseRestHandler):
         try:
             return eval(call)
         except Exception as e:
+            message = str(e)
+ 
             import cherrypy
             cherrypy.response.status = "405"
             return {
                 "error": {
                     "args": e.args,
-                    "message": e.message,
+                    "message": message,
                     "type": e.__class__.__name__
                 }
             }
