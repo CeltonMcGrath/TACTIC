@@ -125,7 +125,16 @@ class DiscussionElementWdg(BaseTableElementWdg):
         'type': 'SelectWdg',
         'category': 'Options',
         'order': 10
+    },
+    'dialog_position': {
+        'description': 'Determine where the popup dialog will appear for the nots',
+        'values': 'side|center',
+        'type': 'SelectWdg',
+        'category': 'Options',
+        'order': 10
     }
+
+
 
     }
 
@@ -1460,9 +1469,10 @@ class DiscussionWdg(BaseRefreshWdg):
 
 
             else:
-                process_wdg = IconWdg("View '%s' notes" % context, "FAS_PENCIL_ALT", size=8)
+                process_wdg = IconWdg("View '%s' notes" % context, "FAS_PENCIL_ALT", size=10)
                 process_top.add(process_wdg)
                 process_wdg.add_style("float: left")
+                process_wdg.add_style("margin: 0px 3px")
 
                 # process arg is meaningless
                 process_wdg = self.get_context_wdg(process, context, count)

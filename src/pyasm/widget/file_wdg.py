@@ -259,8 +259,8 @@ class ThumbWdg(BaseTableElementWdg):
 
 
 
-            layout.add_behavior( {
-            'type': 'smart_click_up',
+            layout.add_relay_behavior( {
+            'type': 'click',
             'bvr_match_class': 'spt_thumb_href',
             'class_name': class_name,
             'cbjs_action': '''
@@ -1663,6 +1663,7 @@ class ThumbCmd(Command):
             snapshot = server.simple_checkin(search_key, "icon", path, mode="copy")
             """
 
+            print("path: ", path)
             if not os.path.exists(path):
                 print("WARNING: path [%s] does not exist" % path)
                 return
