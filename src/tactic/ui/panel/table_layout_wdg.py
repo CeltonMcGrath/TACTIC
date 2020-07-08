@@ -1625,10 +1625,11 @@ class TableLayoutWdg(BaseTableLayoutWdg):
 
                     if self.group_interval and group_value:
                         group_value = self._get_simplified_time(group_value)
-                    elif isinstance(group_value, basestring):
-                        group_value = group_value.encode('utf-8')
-                    else:
-                        group_value = str(group_value)
+                    elif not Common.IS_Pv3:
+                        if isinstance(group_value, basestring):
+                            group_value = group_value.encode('utf-8')
+                        else:
+                            group_value = str(group_value)
 
                     if not group_value:
                         group_value = "__NONE__"
@@ -4731,7 +4732,7 @@ spt.table.add_hidden_row = function(row, class_name, kwargs) {
         var border_color = "var(--spt_palette_table_border)";
 
         // test make the hidden row sit on top of the table
-        widget_html = "<div class='spt_hidden_content_top' style='border: solid 1px "+border_color+"; position: relative; z-index:" + spt.table.last_table.hidden_zindex + "; box-shadow: 0px 0px 15px "+shadow_color+"; background: "+color+"; margin-right: 20px; margin-top: 14px; overflow: hidden; min-width: 300px'>" +
+        widget_html = "<div class='spt_hidden_content_top' style='border: solid 1px "+border_color+"; position: relative; z-index:" + spt.table.last_table.hidden_zindex + "; border-radius: 5px; filter: drop-shadow(0px 0px 10px "+shadow_color+"); background: "+color+"; margin-right: 20px; margin-top: 14px; overflow: hidden; min-width: 300px'>" +
 
           "<div class='spt_hidden_content_pointer' style='border-left: 13px solid transparent; border-right: 13px solid transparent; border-bottom: 14px solid "+color+";position: absolute; top: -14px; left: "+dx+"px'></div>" +
           "<div style='border-left: 12px solid transparent; border-right: 12px solid transparent; border-bottom: 13px solid "+color+";position: absolute; top: -13px; left: "+(dx+1)+"px'></div>" +
@@ -5670,11 +5671,31 @@ spt.table.alter_edit_wdg = function(edit_cell, edit_wdg, size) {
     else if (input.nodeName == "INPUT") {
         set_focus = true;
 
+        var is_calendar = false;
+        if (spt.has_class(input, 'spt_calendar_input')){
+            is_calendar = true;
+            if (input.getAttribute("type") == "date") {
+                var parts = value.split(" ");
+                value = parts[0];
+            }
+            else {
+                var parts = value.split(".");
+                value = parts[0];
+            }
 
-        if (input.type != "color") {
+        }
+
+
+        if (is_calendar) {
+            input.setStyle("height", "");
+            if (size.x > 300) {
+                size.x = 300;
+            }
+            input.setStyle( "width", size.x+'px');
+        }
+        else if (input.type != "color") {
             input.setStyle( "width", size.x+'px');
             input.setStyle( "height", size.y+'px');
-
 
             if (size.y > 500) {
                 input.setStyle( "height", '500px');
@@ -5682,9 +5703,10 @@ spt.table.alter_edit_wdg = function(edit_cell, edit_wdg, size) {
         }
 
 
-        input.value = value;
+        //input.value = value;
+        input.setAttribute("value", value);
         // for calendar input
-        if (spt.has_class(input, 'spt_calendar_input')){
+        if (is_calendar) {
             accept_event = 'change';
             input.setStyle( "width", size.x+125 + 'px');
 

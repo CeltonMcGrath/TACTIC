@@ -259,7 +259,7 @@ class Search(Base):
         user = Environment.get_user_name()
 
         search_type = self.get_base_search_type()
-        api_mode = Config.get_value("security", "api_mode")
+        api_mode = Environment.get_api_mode()
 
         if api_mode in ['open', '', None]:
             return
@@ -480,6 +480,14 @@ class Search(Base):
 
     def add_null_filter(self, name):
         self.add_filter(name, "NULL", quoted=False, op="is")
+
+
+    def add_empty_filter(self, name):
+        self.add_op("begin")
+        self.add_filter(name, "NULL", quoted=False, op="is")
+        self.add_filter(name, "", op="=")
+        self.add_op("or")
+        print("sss: ", self.get_statement())
 
 
     def add_search_filter(self, name, search, op='in', table=''):

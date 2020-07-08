@@ -241,7 +241,8 @@ def get_full_cmd(self, meth, ticket, args):
             request_id = "%s - #%0.7d" % (thread.get_ident(), REQUEST_COUNT)
 
             debug = True
-            if meth.__name__ == "execute_cmd":
+            debug_args = True
+            if meth.__name__ in ["execute_cmd", "execute_python_script", "execute_js_script"]:
                 #if len(args) > 1:
                 if isinstance(args, tuple) and len(args) > 1:
                     first_arg = args[1]
@@ -252,6 +253,10 @@ def get_full_cmd(self, meth, ticket, args):
                     if _debug == False:
                         debug = False
 
+                    _debug_args = first_arg.get("_debug_args")
+                    if _debug_args == False:
+                        debug_args = False
+
             if self.get_protocol() != "local" and debug:
                 print("---")
                 print("user: ", Environment.get_user_name())
@@ -259,7 +264,8 @@ def get_full_cmd(self, meth, ticket, args):
                 print("timestamp: ", now.strftime("%Y-%m-%d %H:%M:%S"))
                 print("method: ", meth.__name__)
                 print("ticket: ", ticket)
-                Common.pretty_print(args)
+                if debug_args:
+                    Common.pretty_print(args)
             
             #self2.results = meth(self, ticket, *args)
             
@@ -357,10 +363,15 @@ TRANS_OPTIONAL_METHODS = {
 API_MODE = {
     "closed": {
         "execute_cmd",
-        #"execute_python_script", # should this be allowed?
         "get_widget",
         "get_ticket",
         "ping",
+
+        # These are questionable?
+        "get_widget_setting",
+        "set_widget_setting"
+
+        #"execute_python_script", # should this be allowed?
     },
     "query": {
         "get_by_search_key",
@@ -468,7 +479,7 @@ def xmlrpc_decorator(meth):
             # environment.
 
             if self.get_protocol() != 'local':
-                api_mode = Config.get_value("security", "api_mode") or "open"
+                api_mode = Environment.get_api_mode()
 
                 allowed = False
 
@@ -2454,7 +2465,7 @@ class ApiXMLRPC(BaseApiXMLRPC):
 
 
         if "@UPDATE" in expression:
-            api_mode = Config.get_value("security", "api_mode")
+            api_mode = Environment.get_api_mode()
             if api_mode in ["query", "closed"]:
                 security = Environment.get_security()
                 user_name = security.get_user_name()
