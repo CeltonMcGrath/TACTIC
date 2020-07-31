@@ -1527,6 +1527,7 @@ class Common(Base):
                 key.set_private_key(cls.PASSWORD_KEY_1024)
             else:
                 key.set_private_key(cls.PASSWORD_KEY_2048)
+            key.set_private_key(cls.PASSWORD_KEY_2048)
 
         password = key.decrypt(coded)
 
@@ -1550,7 +1551,7 @@ class Common(Base):
                 key.import_key(pem_path)
             else:
                 #key.set_private_key(cls.PASSWORD_KEY)
-                key.set_private_key(cls.PASSWORD_KEY_2048)
+                key.set_private_key(cls.PASSWORD_KEY_1024)
 
             coded = key.encrypt(password)
 
